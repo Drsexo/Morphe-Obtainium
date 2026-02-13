@@ -203,7 +203,11 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 	local_app_tag="${local_app_tag// /-}"
 	local_brand_tag="${brand,,}"
 	local_brand_tag="${local_brand_tag// /-}"
-	release_tag="${local_app_tag}-${local_brand_tag}"
+	release_tag_base="${local_app_tag}-${local_brand_tag}"
+
+	version_f=${version// /}
+	version_f=${version_f#v}
+	release_tag="${release_tag_base}-v${version_f}"
 
 	brand_lower="${brand,,}"
 	if [[ "$brand_lower" == *"morphe"* ]]; then
@@ -212,7 +216,6 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 		changelog_link="[ReVanced Patches Changelog](https://github.com/ReVanced/revanced-patches/releases)"
 	fi
 
-	# Clean patches version display
 	patches_display="${patches_ver}"
 	patches_display="${patches_display%.rvp}"
 	patches_display="${patches_display%.mpp}"
@@ -241,9 +244,9 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 			echo ">"
 			echo "> 🔧 **Root:** Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach from Play Store"
 		fi
-	} > "$TEMP_DIR/release_notes/${release_tag}.md"
+	} > "$TEMP_DIR/release_notes/${release_tag_base}.md"
 
-	echo "${release_tag}|${app_name} ${brand}|${local_app_tag}-${local_brand_tag}" >> "$TEMP_DIR/release_tags.log"
+	echo "${release_tag}|${release_tag_base}|${app_name} ${brand}|${local_app_tag}-${local_brand_tag}" >> "$TEMP_DIR/release_tags.log"
 
 done < "$TEMP_DIR/build_success.log"
 

@@ -142,77 +142,63 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Read release_tags.log: release_tag|release_title|files_prefix
           if [ ! -f temp/release_tags.log ]; then
             echo "No release tags found"
             exit 0
           fi
 
-          # De-duplicate release tags (in case of arm64+arm builds for same app)
           sort -u -t'|' -k1,1 temp/release_tags.log > temp/release_tags_unique.log
 
-          while IFS='|' read -r release_tag release_title files_prefix; do
+          while IFS='|' read -r release_tag release_tag_base release_title files_prefix; do
             [ -z "$release_tag" ] && continue
 
-            echo "================================================"
-            echo "Processing release: ${release_tag} (${release_title})"
-            echo "Files prefix: ${files_prefix}"
-            echo "================================================"
+            echo "Processing: ${release_tag} (${release_title})"
 
-            # Find all build files matching this app
-            # Files are named like: youtube-morphe-v20.40.45-arm64-v8a.apk
-            #                       youtube-morphe-magisk-v20.40.45-arm64-v8a.zip
             matching_files=()
             for f in build/${files_prefix}-v*.apk build/${files_prefix}-v*.zip build/${files_prefix}-magisk-v*.zip; do
               [ -f "$f" ] && matching_files+=("$f")
             done
 
             if [ ${#matching_files[@]} -eq 0 ]; then
-              echo "No files found for ${files_prefix}, skipping"
+              echo "No files for ${files_prefix}, skipping"
               continue
             fi
 
-            echo "Found ${#matching_files[@]} file(s):"
-            printf '  %s\n' "${matching_files[@]}"
-
-            # Get release notes
-            notes_file="temp/release_notes/${release_tag}.md"
+            notes_file="temp/release_notes/${release_tag_base}.md"
             if [ -f "$notes_file" ]; then
               release_body=$(cat "$notes_file")
             else
               release_body="## ${release_title}"
             fi
 
-            # Delete existing release assets (but keep the release itself)
-            # This way the release tag stays stable for Obtainium
+            # Delete old release with same base tag pattern (previous version)
+            old_tags=$(gh release list --json tagName -q '.[].tagName' | grep "^${release_tag_base}-v" || true)
+            for old_tag in $old_tags; do
+              if [ "$old_tag" != "$release_tag" ]; then
+                echo "  Deleting old release: ${old_tag}"
+                gh release delete "$old_tag" --yes --cleanup-tag 2>/dev/null || true
+              fi
+            done
+
             if gh release view "$release_tag" &>/dev/null; then
-              echo "Release ${release_tag} exists, deleting old assets..."
-              # Get existing asset IDs and delete them
+              echo "  Updating existing release"
               gh release view "$release_tag" --json assets -q '.assets[].name' | while read -r asset_name; do
-                echo "  Deleting old asset: ${asset_name}"
                 gh release delete-asset "$release_tag" "$asset_name" --yes 2>/dev/null || true
               done
-              # Update release body and title
               gh release edit "$release_tag" \
                 --title "${release_title}" \
-                --notes "${release_body}" \
-                --latest=false
+                --notes "${release_body}"
             else
-              echo "Creating new release: ${release_tag}"
+              echo "  Creating new release"
               gh release create "$release_tag" \
                 --title "${release_title}" \
-                --notes "${release_body}" \
-                --latest=false
+                --notes "${release_body}"
             fi
 
-            # Upload new assets
             for f in "${matching_files[@]}"; do
               echo "  Uploading: $(basename "$f")"
               gh release upload "$release_tag" "$f" --clobber
             done
-
-            echo "Done with ${release_tag}"
-            echo ""
 
           done < temp/release_tags_unique.log
 
@@ -221,13 +207,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Switch to update branch
           if ! git checkout -f update 2>/dev/null; then
             git switch --discard-changes --orphan update
           fi
-
-          # Copy build.md for reference
-          git checkout ${{ github.sha }} -- build.md 2>/dev/null || true
 
           generate_update_json() {
             echo "{
@@ -248,11 +230,12 @@ jobs:
               VER=$(echo "$ZIP_S" | grep version=)
               VER="${VER##*=}"
 
-              # Figure out which release tag this module belongs to
-              # Module filename: youtube-morphe-magisk-v20.40.45-arm64-v8a.zip
-              # Release tag: youtube-morphe
+              # Find matching release tag from release_tags.log
               module_base="${OUTPUT%-magisk-v*}"
-              DLURL="${{ github.server_url }}/${{ github.repository }}/releases/download/${module_base}/${OUTPUT}"
+              module_ver="${OUTPUT#*-magisk-}"
+              module_ver="${module_ver%-arm64-v8a.zip}"
+              module_ver="${module_ver%-arm-v7a.zip}"
+              DLURL="${{ github.server_url }}/${{ github.repository }}/releases/download/${module_base}-${module_ver}/${OUTPUT}"
               generate_update_json "$VER" "$DLURL" > "../$UPDATE_JSON"
             done
             cd ..

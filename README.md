@@ -40,7 +40,7 @@ Builds are scheduled automatically to run **every day at midnight UTC**, trigger
 ### Quick Add (One-click)
 Click the button below on your Android device to add apps:
 
-[![Add to Obtainium](https://img.shields.io/badge/Obtainium-Add%20Apps-2ecc71?style=for-the-badge&logo=android)](https://drsexo.github.io/Morphe-Obtainium/docs/Obtainium.html)
+[![Add to Obtainium](https://img.shields.io/badge/Obtainium-Add%20Apps-2ecc71?style=for-the-badge&logo=android)](https://drsexo.github.io/Morphe-Obtainium/Obtainium.html)
 
 ## 🙏 Credits
 
