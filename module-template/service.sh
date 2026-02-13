@@ -1,7 +1,22 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
-RVPATH=/data/adb/rvhc/${MODDIR##*/}.apk
+RVPATH=/data/adb/Morphe/${MODDIR##*/}.apk
 . "$MODDIR/config"
+
+# Detect root solution
+detect_root_solution() {
+	if [ -f /data/adb/ksu/bin/ksud ]; then
+		echo "kernelsu"
+	elif [ -f /data/adb/ap/bin/apd ]; then
+		echo "apatch"
+	elif [ -f /data/adb/magisk/magisk ]; then
+		echo "magisk"
+	else
+		echo "unknown"
+	fi
+}
+
+ROOT_SOL=$(detect_root_solution)
 
 err() {
 	[ ! -f "$MODDIR/err" ] && cp "$MODDIR/module.prop" "$MODDIR/err"
@@ -33,15 +48,26 @@ run() {
 		err "version mismatch (installed:${VERSION}, module:$PKG_VER)"
 		return
 	fi
+	
+	# Unmount existing mounts
 	grep "$PKG_NAME" /proc/mounts | while read -r line; do
 		mp=${line#* } mp=${mp%% *}
 		umount -l "${mp%%\\*}"
 	done
+	
+	# Set SELinux context
 	if ! chcon u:object_r:apk_data_file:s0 "$RVPATH"; then
 		err "apk not found"
 		return
 	fi
-	mount -o bind "$RVPATH" "$BASEPATH/base.apk"
+	
+	# Mount based on root solution
+	if [ "$ROOT_SOL" = "kernelsu" ] || [ "$ROOT_SOL" = "apatch" ]; then
+		nsenter -t1 -m mount -o bind "$RVPATH" "$BASEPATH/base.apk"
+	else
+		mount -o bind "$RVPATH" "$BASEPATH/base.apk"
+	fi
+	
 	am force-stop "$PKG_NAME"
 	[ -f "$MODDIR/err" ] && mv -f "$MODDIR/err" "$MODDIR/module.prop"
 }

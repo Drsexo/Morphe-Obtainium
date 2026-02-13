@@ -27,13 +27,11 @@ struct root_profile {
     int32_t gid;
     int32_t groups_count;
     int32_t groups[KSU_MAX_GROUPS];
-
     struct {
         uint64_t effective;
         uint64_t permitted;
         uint64_t inheritable;
     } capabilities;
-
     char selinux_domain[KSU_SELINUX_DOMAIN];
     int32_t namespaces;
 };
@@ -72,8 +70,6 @@ struct ksu_get_manager_appid_cmd {
 static int _fd = -1;
 #define ksuctl(op, ...) (ioctl(_fd, op, __VA_ARGS__) >= 0)
 
-#define REPORT_ERR() fprintf(stderr, "%s:%d ERROR: %s\n", __FILE__, __LINE__, strerror(errno));
-
 int main(int argc, char* argv[]) {
     if (argc <= 2) {
         fprintf(stderr,
@@ -86,32 +82,31 @@ int main(int argc, char* argv[]) {
 
     syscall(SYS_reboot, KSU_INSTALL_MAGIC1, KSU_INSTALL_MAGIC2, 0, &_fd);
     if (_fd == -1) {
-        REPORT_ERR();
-        return 1;
+        /* KSU not available or incompatible version, silently exit */
+        return 0;
     }
     long uid = atol(argv[1]);
 
     struct ksu_uid_should_umount_cmd umount_cmd = {0};
+    umount_cmd.uid = (uint32_t)uid;
     if (!ksuctl(KSU_IOCTL_UID_SHOULD_UMOUNT, &umount_cmd)) {
-        REPORT_ERR();
-        return 1;
+        /* ioctl not supported on this KSU version, not fatal */
+        return 0;
     }
     if (!umount_cmd.should_umount) return 0;
 
     struct ksu_get_manager_appid_cmd appid_cmd = {0};
     if (!ksuctl(KSU_IOCTL_GET_MANAGER_APPID, &appid_cmd)) {
-        REPORT_ERR();
-        return 1;
+        return 0;
     }
 
     if (setuid(appid_cmd.appid) != 0) {
-        REPORT_ERR();
-        return 1;
+        return 0;
     }
+
     struct app_profile profile = {0};
     profile.current_uid = uid;
     if (!ksuctl(KSU_IOCTL_GET_APP_PROFILE, &profile)) {
-        printf("Create profile for %s\n", argv[2]);
         profile.version = KSU_APP_PROFILE_VER;
         strncpy(profile.key, argv[2], sizeof(profile.key) / sizeof(profile.key[0]));
     }
@@ -120,8 +115,8 @@ int main(int argc, char* argv[]) {
     profile.nrp_config.profile.umount_modules = false;
 
     if (!ksuctl(KSU_IOCTL_SET_APP_PROFILE, &profile)) {
-        REPORT_ERR();
-        return 1;
+        /* Failed but not fatal */
+        return 0;
     }
 
     return 0;

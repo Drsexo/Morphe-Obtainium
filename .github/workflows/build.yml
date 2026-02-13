@@ -1,23 +1,104 @@
-name: Build Modules
+name: Build
 on:
-  workflow_call:
-    inputs:
-      from_ci:
-        type: boolean
-        required: false
-        default: true
-
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
-  run:
+  check:
+    name: Check for updates
+    permissions: write-all
+    runs-on: ubuntu-latest
+    outputs:
+      SHOULD_BUILD: ${{ steps.check_updates.outputs.SHOULD_BUILD }}
+      BUILD_MORPHE: ${{ steps.check_updates.outputs.BUILD_MORPHE }}
+      BUILD_REVANCED: ${{ steps.check_updates.outputs.BUILD_REVANCED }}
+      LAST_BUILD_DATE: ${{ steps.check_updates.outputs.LAST_BUILD_DATE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for patch updates
+        id: check_updates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IS_MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          # Get last build date from the most recent release across all tags
+          LAST_BUILD_DATE=$(gh release list -L 20 --json createdAt -q '[.[].createdAt] | sort | last' 2>/dev/null | cut -d'T' -f1 || echo "")
+
+          if [ -z "$LAST_BUILD_DATE" ] || ! date -d "$LAST_BUILD_DATE" &>/dev/null 2>&1; then
+            LAST_BUILD_DATE=$(date -u -d "30 days ago" +%Y-%m-%d)
+            echo "No valid previous build date found, using: $LAST_BUILD_DATE"
+          else
+            echo "Last build date: $LAST_BUILD_DATE"
+          fi
+          echo "LAST_BUILD_DATE=$LAST_BUILD_DATE" >> $GITHUB_OUTPUT
+
+          if [ "$IS_MANUAL" = "true" ]; then
+            echo "Manual trigger - building all apps"
+            echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
+            echo "BUILD_MORPHE=true" >> $GITHUB_OUTPUT
+            echo "BUILD_REVANCED=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Scheduled run - checking for patch updates..."
+
+          MORPHE_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/MorpheApp/morphe-patches/releases" | \
+            jq -r --arg since "$LAST_BUILD_DATE" \
+            '[.[] | select(.prerelease == false and .published_at > $since)] | length')
+
+          if [ "$MORPHE_RELEASES" -gt 0 ]; then
+            echo "Found $MORPHE_RELEASES new Morphe patches release(s)"
+            BUILD_MORPHE="true"
+          else
+            echo "No new Morphe patches releases"
+            BUILD_MORPHE="false"
+          fi
+
+          REVANCED_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/ReVanced/revanced-patches/releases" | \
+            jq -r --arg since "$LAST_BUILD_DATE" \
+            '[.[] | select(.prerelease == false and .published_at > $since)] | length')
+
+          if [ "$REVANCED_RELEASES" -gt 0 ]; then
+            echo "Found $REVANCED_RELEASES new ReVanced patches release(s)"
+            BUILD_REVANCED="true"
+          else
+            echo "No new ReVanced patches releases"
+            BUILD_REVANCED="false"
+          fi
+
+          if [ "$BUILD_MORPHE" = "true" ] || [ "$BUILD_REVANCED" = "true" ]; then
+            echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
+          else
+            echo "SHOULD_BUILD=0" >> $GITHUB_OUTPUT
+          fi
+
+          echo "BUILD_MORPHE=$BUILD_MORPHE" >> $GITHUB_OUTPUT
+          echo "BUILD_REVANCED=$BUILD_REVANCED" >> $GITHUB_OUTPUT
+
+      - name: Clear old workflow runs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run list -L400 --json databaseId -q '.[].databaseId' | tail -n+10 | xargs -IID gh api "repos/${{ github.repository }}/actions/runs/ID" -X DELETE || :
+
+  build:
+    name: Build apps
+    needs: check
+    if: ${{ needs.check.outputs.SHOULD_BUILD == '1' }}
     permissions: write-all
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-java@v4
         with:
           distribution: "zulu"
-          java-version: "17"
+          java-version: "21"
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,123 +106,164 @@ jobs:
           fetch-depth: 0
           submodules: true
 
-      - name: Update config
-        if: ${{ inputs.from_ci }}
+      - name: Get date and version code
+        id: date_ver
         run: |
-          if git checkout origin/update build.md; then
-            UPDATE_CFG=$(./build.sh config.toml --config-update)
-            if [ "$UPDATE_CFG" ]; then
-              echo "$UPDATE_CFG" > config.json
-            fi
+          echo "DATE=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          echo "NEXT_VER_CODE=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
+
+      - name: Build modules/APKs
+        run: |
+          chmod +x build.sh
+          find bin -type f -exec chmod +x {} \;
+          ./build.sh config.toml
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          NEXT_VER_CODE: ${{ steps.date_ver.outputs.NEXT_VER_CODE }}
+          LAST_BUILD_DATE: ${{ needs.check.outputs.LAST_BUILD_DATE }}
+          BUILD_MORPHE: ${{ needs.check.outputs.BUILD_MORPHE }}
+          BUILD_REVANCED: ${{ needs.check.outputs.BUILD_REVANCED }}
+
+      - name: Check if build produced any files
+        id: check_build
+        run: |
+          if [ -z "$(ls -A build/ 2>/dev/null)" ]; then
+            echo "No build artifacts found"
+            echo "HAS_ARTIFACTS=false" >> $GITHUB_OUTPUT
+          else
+            echo "Build artifacts found:"
+            ls -la build/
+            echo "HAS_ARTIFACTS=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Get next version code
-        id: next_ver_code
+      - name: Create per-app releases
+        if: steps.check_build.outputs.HAS_ARTIFACTS == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG=$(gh release list -L 1 | awk -F '\t' '{print $3}')
-          if [ -z "$TAG" ]; then TAG=0; fi
-          echo "NEXT_VER_CODE=$((TAG + 1))" >> $GITHUB_OUTPUT
+          # Read release_tags.log: release_tag|release_title|files_prefix
+          if [ ! -f temp/release_tags.log ]; then
+            echo "No release tags found"
+            exit 0
+          fi
 
-      - name: Build modules/APKs
-        run: if [ -f "config.json" ]; then ./build.sh config.json; else ./build.sh config.toml; fi
+          # De-duplicate release tags (in case of arm64+arm builds for same app)
+          sort -u -t'|' -k1,1 temp/release_tags.log > temp/release_tags_unique.log
+
+          while IFS='|' read -r release_tag release_title files_prefix; do
+            [ -z "$release_tag" ] && continue
+
+            echo "================================================"
+            echo "Processing release: ${release_tag} (${release_title})"
+            echo "Files prefix: ${files_prefix}"
+            echo "================================================"
+
+            # Find all build files matching this app
+            # Files are named like: youtube-morphe-v20.40.45-arm64-v8a.apk
+            #                       youtube-morphe-magisk-v20.40.45-arm64-v8a.zip
+            matching_files=()
+            for f in build/${files_prefix}-v*.apk build/${files_prefix}-v*.zip build/${files_prefix}-magisk-v*.zip; do
+              [ -f "$f" ] && matching_files+=("$f")
+            done
+
+            if [ ${#matching_files[@]} -eq 0 ]; then
+              echo "No files found for ${files_prefix}, skipping"
+              continue
+            fi
+
+            echo "Found ${#matching_files[@]} file(s):"
+            printf '  %s\n' "${matching_files[@]}"
+
+            # Get release notes
+            notes_file="temp/release_notes/${release_tag}.md"
+            if [ -f "$notes_file" ]; then
+              release_body=$(cat "$notes_file")
+            else
+              release_body="## ${release_title}"
+            fi
+
+            # Delete existing release assets (but keep the release itself)
+            # This way the release tag stays stable for Obtainium
+            if gh release view "$release_tag" &>/dev/null; then
+              echo "Release ${release_tag} exists, deleting old assets..."
+              # Get existing asset IDs and delete them
+              gh release view "$release_tag" --json assets -q '.assets[].name' | while read -r asset_name; do
+                echo "  Deleting old asset: ${asset_name}"
+                gh release delete-asset "$release_tag" "$asset_name" --yes 2>/dev/null || true
+              done
+              # Update release body and title
+              gh release edit "$release_tag" \
+                --title "${release_title}" \
+                --notes "${release_body}" \
+                --latest=false
+            else
+              echo "Creating new release: ${release_tag}"
+              gh release create "$release_tag" \
+                --title "${release_title}" \
+                --notes "${release_body}" \
+                --latest=false
+            fi
+
+            # Upload new assets
+            for f in "${matching_files[@]}"; do
+              echo "  Uploading: $(basename "$f")"
+              gh release upload "$release_tag" "$f" --clobber
+            done
+
+            echo "Done with ${release_tag}"
+            echo ""
+
+          done < temp/release_tags_unique.log
+
+      - name: Update Magisk update JSONs
+        if: steps.check_build.outputs.HAS_ARTIFACTS == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: $GITHUB_REPOSITORY
-          NEXT_VER_CODE: ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}
-
-      - name: Get output
-        id: get_output
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          DELIM="$(openssl rand -hex 8)"
-          echo "BUILD_LOG<<${DELIM}" >> "$GITHUB_OUTPUT"
-          cat build.md >> "$GITHUB_OUTPUT"
-          echo "${DELIM}" >> "$GITHUB_OUTPUT"
-          cp -f build.md build.tmp
+          # Switch to update branch
+          if ! git checkout -f update 2>/dev/null; then
+            git switch --discard-changes --orphan update
+          fi
 
-      - name: Upload modules to release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          body: ${{ steps.get_output.outputs.BUILD_LOG }}
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ./build/*
-          release_name: ReVanced
-          tag: ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}
-          file_glob: true
-          overwrite: true
+          # Copy build.md for reference
+          git checkout ${{ github.sha }} -- build.md 2>/dev/null || true
 
-      - name: Update changelog and Magisk update json
-        id: update_config
-        run: |
-          git checkout -f update || git switch --discard-changes --orphan update
-          cp -f build.tmp build.md
-          get_update_json() {
+          generate_update_json() {
             echo "{
-            \"version\": \"$1\",
-            \"versionCode\": ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }},
-            \"zipUrl\": \"$2\",
-            \"changelog\": \"https://raw.githubusercontent.com/$GITHUB_REPOSITORY/update/build.md\"
-          }"
+              \"version\": \"$1\",
+              \"versionCode\": ${{ steps.date_ver.outputs.NEXT_VER_CODE }},
+              \"zipUrl\": \"$2\",
+              \"changelog\": \"https://raw.githubusercontent.com/${{ github.repository }}/update/build.md\"
+            }"
           }
 
-          cd build || { echo "build folder not found"; exit 1; }
-          for OUTPUT in *magisk*.zip; do
-            [ "$OUTPUT" = "*magisk*.zip" ] && continue
-            ZIP_S=$(unzip -p "$OUTPUT" module.prop)
-            if ! UPDATE_JSON=$(echo "$ZIP_S" | grep updateJson); then continue; fi
-            UPDATE_JSON="${UPDATE_JSON##*/}"
-            VER=$(echo "$ZIP_S" | grep version=)
-            VER="${VER##*=}"
-            DLURL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}/${OUTPUT}"
-            get_update_json "$VER" "$DLURL" >"../$UPDATE_JSON"
-          done
-          cd ..
+          if [ -d build ]; then
+            cd build
+            for OUTPUT in *magisk*.zip; do
+              [ "$OUTPUT" = "*magisk*.zip" ] && continue
+              ZIP_S=$(unzip -p "$OUTPUT" module.prop 2>/dev/null) || continue
+              UPDATE_JSON=$(echo "$ZIP_S" | grep updateJson || continue)
+              UPDATE_JSON="${UPDATE_JSON##*/}"
+              VER=$(echo "$ZIP_S" | grep version=)
+              VER="${VER##*=}"
 
-          find . -name "*-update.json" | grep . || : >dummy-update.json
+              # Figure out which release tag this module belongs to
+              # Module filename: youtube-morphe-magisk-v20.40.45-arm64-v8a.zip
+              # Release tag: youtube-morphe
+              module_base="${OUTPUT%-magisk-v*}"
+              DLURL="${{ github.server_url }}/${{ github.repository }}/releases/download/${module_base}/${OUTPUT}"
+              generate_update_json "$VER" "$DLURL" > "../$UPDATE_JSON"
+            done
+            cd ..
+          fi
+
+          find . -name "*-update.json" | grep . || echo "{}" > dummy-update.json
 
       - uses: stefanzweifel/git-auto-commit-action@v5
+        if: steps.check_build.outputs.HAS_ARTIFACTS == 'true'
         with:
           branch: update
           skip_checkout: true
           file_pattern: build.md *-update.json
-          commit_message: Bump version ${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}
-
-      - name: Report to Telegram
-        env:
-          TG_TOKEN: ${{ secrets.TG_TOKEN }}
-        if: env.TG_TOKEN != null
-        run: |
-          cd build || { echo "build folder not found"; exit 1; }
-
-          TG_CHAT="@rvc_magisk"
-          NL=$'\n'
-          APKS=""
-          MODULES=""
-          for OUTPUT in *; do
-            DL_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/${{ steps.next_ver_code.outputs.NEXT_VER_CODE }}/${OUTPUT}"
-            if [[ $OUTPUT = *.apk ]]; then
-              APKS+="${NL}📦[${OUTPUT}](${DL_URL})"
-            elif [[ $OUTPUT = *.zip ]]; then
-              MODULES+="${NL}📦[${OUTPUT}](${DL_URL})"
-            fi
-          done
-          MODULES=${MODULES#"$NL"}
-          APKS=${APKS#"$NL"}
-
-          BODY="$(sed 's/^\* \*\*/↪ \*\*/g; s/^\* `/↪ \*\*/g; s/`/\*/g; s/^\* /\↪/g; s/\*\*/\*/g; s/###//g; s/^- /↪ /g; /^==/d;' ../build.md)"
-          MSG="*New build!*
-
-          ${BODY}
-
-          *▼ Download Links:*
-          Modules:
-          ${MODULES}
-
-          APKs:
-          ${APKS}
-          "
-          echo "'$MSG'"
-          MSG=${MSG:0:9450}
-          POST="https://api.telegram.org/bot${TG_TOKEN}/sendMessage"
-          curl -X POST --data-urlencode "parse_mode=Markdown" --data-urlencode "disable_web_page_preview=true" --data-urlencode "text=${MSG}" --data-urlencode "chat_id=${TG_CHAT}" "$POST"
+          commit_message: "Build ${{ steps.date_ver.outputs.DATE }}"

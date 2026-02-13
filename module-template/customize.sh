@@ -1,6 +1,23 @@
 . "$MODPATH/config"
 
 ui_print ""
+
+# Detect root solution
+detect_root_solution() {
+	if [ -f /data/adb/ksu/bin/ksud ]; then
+		echo "kernelsu"
+	elif [ -f /data/adb/ap/bin/apd ]; then
+		echo "apatch"
+	elif [ -f /data/adb/magisk/magisk ]; then
+		echo "magisk"
+	else
+		echo "unknown"
+	fi
+}
+
+ROOT_SOL=$(detect_root_solution)
+ui_print "* Detected root: $ROOT_SOL"
+
 if [ -n "$MODULE_ARCH" ] && [ "$MODULE_ARCH" != "$ARCH" ]; then
 	abort "ERROR: Wrong arch
 Your device: $ARCH
@@ -15,13 +32,18 @@ elif [ "$ARCH" = "x86" ]; then
 elif [ "$ARCH" = "x64" ]; then
 	ARCH_LIB=x86_64
 else abort "ERROR: unreachable: ${ARCH}"; fi
-RVPATH=/data/adb/rvhc/${MODPATH##*/}.apk
+RVPATH=/data/adb/Morphe/${MODPATH##*/}.apk
 
 set_perm_recursive "$MODPATH/bin" 0 0 0755 0777
 
-if su -M -c true >/dev/null 2>/dev/null; then
+# Mount namespace handling for different root solutions
+if [ "$ROOT_SOL" = "kernelsu" ] || [ "$ROOT_SOL" = "apatch" ]; then
+	alias mm='nsenter -t1 -m'
+elif su -M -c true >/dev/null 2>/dev/null; then
 	alias mm='su -M -c'
-else alias mm='nsenter -t1 -m'; fi
+else
+	alias mm='nsenter -t1 -m'
+fi
 
 mm grep -F "$PKG_NAME" /proc/mounts | while read -r line; do
 	ui_print "* Un-mount"
@@ -109,8 +131,8 @@ install() {
 						install_err=" "
 						break
 					fi
-					mkdir -p /data/adb/rvhc/empty /data/adb/post-fs-data.d
-					echo "mount -o bind /data/adb/rvhc/empty $BASEPATH" >"$SCNM"
+					mkdir -p /data/adb/Morphe/empty /data/adb/post-fs-data.d
+					echo "mount -o bind /data/adb/Morphe/empty $BASEPATH" >"$SCNM"
 					chmod +x "$SCNM"
 					ui_print "* Created the uninstall script."
 					ui_print ""
@@ -161,9 +183,12 @@ ui_print "* Setting Permissions"
 set_perm "$MODPATH/base.apk" 1000 1000 644 u:object_r:apk_data_file:s0
 
 ui_print "* Mounting $PKG_NAME"
-mkdir -p "/data/adb/rvhc"
-RVPATH=/data/adb/rvhc/${MODPATH##*/}.apk
+mkdir -p "/data/adb/Morphe"
+RVPATH=/data/adb/Morphe/${MODPATH##*/}.apk
 mv -f "$MODPATH/base.apk" "$RVPATH"
+
+# SELinux context for different root solutions
+chcon u:object_r:apk_data_file:s0 "$RVPATH" 2>/dev/null || true
 
 if ! op=$(mm mount -o bind "$RVPATH" "$BASEPATH/base.apk" 2>&1); then
 	ui_print "ERROR: Mount failed!"
@@ -171,11 +196,10 @@ if ! op=$(mm mount -o bind "$RVPATH" "$BASEPATH/base.apk" 2>&1); then
 fi
 am force-stop "$PKG_NAME"
 ui_print "* Optimizing $PKG_NAME"
-
 cmd package compile -m speed-profile -f "$PKG_NAME"
-# nohup cmd package compile -m speed-profile -f "$PKG_NAME" >/dev/null 2>&1
+# nohup cmd package compile --reset "$PKG_NAME" >/dev/null 2>&1 &
 
-if [ "$KSU" ]; then
+if [ "$KSU" ] || [ -f /data/adb/ksu/bin/ksud ]; then
 	UID=$(dumpsys package "$PKG_NAME" 2>&1 | grep -m1 uid)
 	UID=${UID#*=} UID=${UID%% *}
 	if [ -z "$UID" ]; then
@@ -183,17 +207,12 @@ if [ "$KSU" ]; then
 		UID=${UID#*=} UID=${UID%% *}
 	fi
 	if [ "$UID" ]; then
-		if ! OP=$("${MODPATH:?}/bin/$ARCH/ksu_profile" "$UID" "$PKG_NAME" 2>&1); then
-			ui_print "ERROR ksu_profile: $OP"
-		fi
-	else
-		ui_print "ERROR: UID could not be found for $PKG_NAME"
-		dumpsys package "$PKG_NAME" >&2
+		"${MODPATH:?}/bin/$ARCH/ksu_profile" "$UID" "$PKG_NAME" 2>/dev/null || true
 	fi
 fi
 
 rm -rf "${MODPATH:?}/bin" "$MODPATH/$PKG_NAME.apk"
 
 ui_print "* Done"
-ui_print "  by j-hc (github.com/j-hc)"
+ui_print "  by Drsexo (github.com/Drsexo)"
 ui_print " "

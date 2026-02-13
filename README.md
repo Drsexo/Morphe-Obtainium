@@ -1,57 +1,51 @@
-# ReVanced Magisk Module
-[![Telegram](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/rvc_magisk)
-[![CI](https://github.com/j-hc/revanced-magisk-module/actions/workflows/ci.yml/badge.svg?event=schedule)](https://github.com/j-hc/revanced-magisk-module/actions/workflows/ci.yml)
+<div align="center">
 
-Extensive ReVanced builder  
+# Morphe Builder
+   
+[![Build](https://github.com/Drsexo/Morphe-Obtainium/actions/workflows/build.yml/badge.svg)](https://github.com/Drsexo/Morphe-Obtainium/actions/workflows/build.yml)
 
-Get the [latest CI release](https://github.com/j-hc/revanced-magisk-module/releases).
+</div>
 
-Use [**zygisk-detach**](https://github.com/j-hc/zygisk-detach) to detach YouTube and YT Music from Play Store if you are using magisk modules. 
+Automated builder for Morphe apps with Obtainium support.  Enhanced for **personal** use.
+Based on [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module)
 
-<details><summary><big>Features</big></summary>
-<ul>
- <li>Support all present and future ReVanced and <a href="https://github.com/inotia00/revanced-patches">ReVanced Extended</a> apps</li>
- <li> Can build Magisk modules and non-root APKs</li>
- <li> Updated daily with the latest versions of apps and patches</li>
- <li> Optimize APKs and modules for size</li>
- <li> Modules</li>
-    <ul>
-     <li> recompile invalidated odex for faster usage</li>
-     <li> receive updates from Magisk app</li>
-     <li> do not break safetynet or trigger root detections</li>
-     <li> handle installation of the correct version of the stock app and all that</li>
-     <li> support Magisk and KernelSU</li>
-    </ul>
-</ul>
-Note that the <a href="../../actions/workflows/ci.yml">CI workflow</a> is scheduled to build the modules and APKs everyday using GitHub Actions if there is a change in ReVanced patches. You may want to disable it.
-</details>
+## 📦 Apps Built
 
-## To include/exclude patches or patch other apps
+| App           | Patches  | Build Mode |
+| ------------- | -------- | ------------------- |
+| YouTube       | Morphe   | APK + Magisk Module |
+| YouTube Music | Morphe   | APK + Magisk Module |
+| Reddit        | Morphe   | APK                 |
 
- * Star the repo :eyes:
- * Use the repo as a [template](https://github.com/new?template_name=revanced-magisk-module&template_owner=j-hc)
- * Customize [`config.toml`](./config.toml) using [rvmm-config-gen](https://j-hc.github.io/rvmm-config-gen/)
- * Run the build [workflow](../../actions/workflows/build.yml)
- * Grab your modules and APKs from [releases](../../releases)
+## 📅 Build Schedule
 
-also see here [`CONFIG.md`](./CONFIG.md)
+Builds are scheduled automatically to run **every day at midnight UTC**, triggered only when new stable patches are released.
 
-## If you are having trouble with the classic mount method of the modules
-such as,
-- **"Reflash needed"** error after reboots
-- **"Suspicious mount detected"** warnings from root detector apps
+## 📱 Installation guide
 
-You can consider using [rvmm-zygisk-mount](https://github.com/j-hc/rvmm-zygisk-mount)
+### Root (Magisk/KernelSU/APatch Module)
+1. Download the Magisk module (`.zip`) from [Releases](../../releases)
+2. Install via Magisk/KernelSU/APatch
+3. Reboot
+4. (Recommended) Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach the app from Play Store updates
 
-## Building Locally
-### On Termux
-```console
-bash <(curl -sSf https://raw.githubusercontent.com/j-hc/revanced-magisk-module/main/build-termux.sh)
-```
+### Non-root (APK)
+1. Download the APK from [Releases](../../releases)
+2. Install [MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases) for Google login functionality
+3. Install the patched APK
 
-### On Desktop
-```console
-$ git clone https://github.com/j-hc/revanced-magisk-module
-$ cd revanced-magisk-module
-$ ./build.sh
-```
+### 📥 Obtainium (Recommended)
+[Obtainium](https://github.com/ImranR98/Obtainium) allows you to install and update apps directly from this repository within the app.
+
+### Quick Add (One-click)
+Click the button below on your Android device to add apps:
+
+[![Add to Obtainium](https://img.shields.io/badge/Obtainium-Add%20Apps-2ecc71?style=for-the-badge&logo=android)](https://drsexo.github.io/Morphe-Obtainium/docs/Obtainium.html)
+
+## 🙏 Credits
+
+- [j-hc](https://github.com/j-hc) - Original [revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module) builder architecture
+- [MorpheApp](https://github.com/MorpheApp) - Morphe patches, CLI, and MicroG-RE
+- [ReVanced](https://github.com/ReVanced) - Original ReVanced patches and tools
+- [WSTxda](https://github.com/WSTxda) - Original MicroG-RE concept
+- [ImranR98](https://github.com/ImranR98) - Obtainium app
