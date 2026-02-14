@@ -1,6 +1,6 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
-RVPATH=/data/adb/Morphe/${MODDIR##*/}.apk
+RVPATH=/data/adb/rvhc/${MODDIR##*/}.apk
 . "$MODDIR/config"
 
 # Detect root solution
