@@ -15,7 +15,7 @@ riplib = true
 app-name = "YouTube"
 brand = "Morphe"
 build-mode = "both"
-version = "21.06.257"
+version = "latest"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 
@@ -24,7 +24,7 @@ uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 app-name = "YouTube Music"
 brand = "Morphe"
 build-mode = "both"
-version = "9.03.52"
+version = "latest"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 
