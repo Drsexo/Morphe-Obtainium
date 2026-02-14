@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=&weight=900&size=25&duration=3000&pause=50&color=7E9B8A&center=true&width=435&height=40&lines=Morphe+Builder;Updated+daily" alt="Typing SVG" /></a>  
+<a href="https://git.io/typing-svg"><img src="https://readme-typing-svg.demolab.com?font=&weight=900&size=25&duration=2500&pause=45&color=7E9B8A&center=true&width=435&height=40&lines=Morphe+Builder;Updated+Daily" alt="Typing SVG" /></a>  
 ![Build](https://img.shields.io/github/actions/workflow/status/Drsexo/Morphe-Obtainium/build.yml?style=for-the-badge&logo=jenkins&logoColor=%23ffffff&logoSize=auto&color=%237E9B8A)
 
 </div>

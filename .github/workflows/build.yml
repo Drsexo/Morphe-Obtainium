@@ -28,12 +28,10 @@ jobs:
           IS_MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
           LAST_BUILD_DATE=$(gh release list -L 20 --json createdAt -q '[.[].createdAt] | sort | last' 2>/dev/null | cut -d'T' -f1 || echo "")
-
           if [ -z "$LAST_BUILD_DATE" ] || ! date -d "$LAST_BUILD_DATE" &>/dev/null 2>&1; then
             LAST_BUILD_DATE=$(date -u -d "30 days ago" +%Y-%m-%d)
           fi
           echo "LAST_BUILD_DATE=$LAST_BUILD_DATE" >> $GITHUB_OUTPUT
-
           if [ "$IS_MANUAL" = "true" ]; then
             echo "Manual trigger - building all apps"
             echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
@@ -42,11 +40,9 @@ jobs:
             echo "BUILD_PIKO=true" >> $GITHUB_OUTPUT
             exit 0
           fi
-
           BUILD_MORPHE="false"
           BUILD_REVANCED="false"
           BUILD_PIKO="false"
-
           MORPHE_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
             "https://api.github.com/repos/MorpheApp/morphe-patches/releases" | \
             jq -r --arg since "$LAST_BUILD_DATE" \
@@ -55,7 +51,6 @@ jobs:
             echo "Found $MORPHE_RELEASES new Morphe patches release(s)"
             BUILD_MORPHE="true"
           fi
-
           REVANCED_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
             "https://api.github.com/repos/ReVanced/revanced-patches/releases" | \
             jq -r --arg since "$LAST_BUILD_DATE" \
@@ -64,7 +59,6 @@ jobs:
             echo "Found $REVANCED_RELEASES new ReVanced patches release(s)"
             BUILD_REVANCED="true"
           fi
-
           PIKO_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
             "https://api.github.com/repos/crimera/piko/releases" | \
             jq -r --arg since "$LAST_BUILD_DATE" \
@@ -73,13 +67,11 @@ jobs:
             echo "Found $PIKO_RELEASES new Piko patches release(s)"
             BUILD_PIKO="true"
           fi
-
           if [ "$BUILD_MORPHE" = "true" ] || [ "$BUILD_REVANCED" = "true" ] || [ "$BUILD_PIKO" = "true" ]; then
             echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
           else
             echo "SHOULD_BUILD=0" >> $GITHUB_OUTPUT
           fi
-
           echo "BUILD_MORPHE=$BUILD_MORPHE" >> $GITHUB_OUTPUT
           echo "BUILD_REVANCED=$BUILD_REVANCED" >> $GITHUB_OUTPUT
           echo "BUILD_PIKO=$BUILD_PIKO" >> $GITHUB_OUTPUT
@@ -144,36 +136,30 @@ jobs:
         if: steps.check_build.outputs.HAS_ARTIFACTS == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_API_TIMEOUT: 60
         run: |
           if [ ! -f temp/release_tags.log ]; then
             echo "No release tags found"
             exit 0
           fi
-
           sort -u -t'|' -k1,1 temp/release_tags.log > temp/release_tags_unique.log
-
           while IFS='|' read -r release_tag release_tag_base release_title files_prefix; do
             [ -z "$release_tag" ] && continue
-
             echo "Processing: ${release_tag} (${release_title})"
-
             matching_files=()
             for f in build/${files_prefix}-v*.apk build/${files_prefix}-v*.zip build/${files_prefix}-magisk-v*.zip; do
               [ -f "$f" ] && matching_files+=("$f")
             done
-
             if [ ${#matching_files[@]} -eq 0 ]; then
               echo "No files for ${files_prefix}, skipping"
               continue
             fi
-
             notes_file="temp/release_notes/${release_tag_base}.md"
             if [ -f "$notes_file" ]; then
               release_body=$(cat "$notes_file")
             else
               release_body="## ${release_title}"
             fi
-
             # Delete old release with same base tag pattern (previous version)
             old_tags=$(gh release list --json tagName -q '.[].tagName' | grep "^${release_tag_base}-v" || true)
             for old_tag in $old_tags; do
@@ -182,7 +168,6 @@ jobs:
                 gh release delete "$old_tag" --yes --cleanup-tag 2>/dev/null || true
               fi
             done
-
             if gh release view "$release_tag" &>/dev/null; then
               echo "  Updating existing release"
               gh release view "$release_tag" --json assets -q '.assets[].name' | while read -r asset_name; do
@@ -197,12 +182,10 @@ jobs:
                 --title "${release_title}" \
                 --notes "${release_body}"
             fi
-
             for f in "${matching_files[@]}"; do
               echo "  Uploading: $(basename "$f")"
               gh release upload "$release_tag" "$f" --clobber
             done
-
           done < temp/release_tags_unique.log
 
       - name: Update Magisk update JSONs
@@ -213,7 +196,6 @@ jobs:
           if ! git checkout -f update 2>/dev/null; then
             git switch --discard-changes --orphan update
           fi
-
           generate_update_json() {
             echo "{
               \"version\": \"$1\",
@@ -222,7 +204,6 @@ jobs:
               \"changelog\": \"https://raw.githubusercontent.com/${{ github.repository }}/update/build.md\"
             }"
           }
-
           if [ -d build ]; then
             cd build
             for OUTPUT in *magisk*.zip; do
@@ -232,7 +213,6 @@ jobs:
               UPDATE_JSON="${UPDATE_JSON##*/}"
               VER=$(echo "$ZIP_S" | grep version=)
               VER="${VER##*=}"
-
               # Find matching release tag from release_tags.log
               module_base="${OUTPUT%-magisk-v*}"
               module_ver="${OUTPUT#*-magisk-}"
@@ -243,7 +223,6 @@ jobs:
             done
             cd ..
           fi
-
           find . -name "*-update.json" | grep . || echo "{}" > dummy-update.json
 
       - uses: stefanzweifel/git-auto-commit-action@v5
@@ -253,3 +232,105 @@ jobs:
           skip_checkout: true
           file_pattern: build.md *-update.json
           commit_message: "Build ${{ steps.date_ver.outputs.DATE }}"
+
+      - name: Notify Telegram
+        if: steps.check_build.outputs.HAS_ARTIFACTS == 'true'
+        env:
+          TG_TOKEN: ${{ secrets.TG_TOKEN }}
+          TG_CHAT: ${{ secrets.TG_CHAT }}
+        run: |
+          if [ -z "$TG_TOKEN" ] || [ -z "$TG_CHAT" ]; then
+            echo "Telegram not configured, skipping"
+            exit 0
+          fi
+
+          if [ ! -f temp/build_success.log ]; then
+            echo "No successful builds to notify about"
+            exit 0
+          fi
+
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}"
+
+          send_tg() {
+            local msg="$1"
+            msg="${msg:0:4000}"
+            curl -s -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${TG_CHAT}" \
+              --data-urlencode "text=${msg}" \
+              --data-urlencode "parse_mode=HTML" \
+              --data-urlencode "disable_web_page_preview=true" || true
+            sleep 2
+          }
+
+          while IFS='|' read -r table_name app_ver app_name brand patches_src patches_ver build_mode arch_f; do
+            [ -z "$table_name" ] && continue
+
+            patches_display="${patches_ver}"
+            patches_display="${patches_display%.rvp}"
+            patches_display="${patches_display%.mpp}"
+
+            brand_lower="${brand,,}"
+            cli_name=""
+            patches_link=""
+            cli_link=""
+            if [[ "$brand_lower" == *"morphe"* ]]; then
+              cli_name="Morphe CLI"
+              patches_link='<a href="https://github.com/MorpheApp/morphe-patches/releases">Patches</a>'
+              cli_link='<a href="https://github.com/MorpheApp/morphe-cli/releases">CLI</a>'
+            elif [[ "$brand_lower" == *"piko"* ]]; then
+              cli_name="ReVanced CLI"
+              patches_link='<a href="https://github.com/crimera/piko/releases">Patches</a>'
+              cli_link='<a href="https://github.com/inotia00/revanced-cli/releases">CLI</a>'
+            else
+              cli_name="ReVanced CLI"
+              patches_link='<a href="https://github.com/ReVanced/revanced-patches/releases">Patches</a>'
+              cli_link='<a href="https://github.com/revanced/revanced-cli/releases">CLI</a>'
+            fi
+
+            cli_ver_display=""
+            for cli_file in temp/*/morphe-cli-*.jar temp/*/revanced-cli-*.jar; do
+              if [ -f "$cli_file" ]; then
+                cli_base=$(basename "$cli_file")
+                cli_ver_display=$(echo "$cli_base" | sed 's/.*cli-\([0-9.]*\).*/\1/')
+                break
+              fi
+            done
+
+            local_app_tag="${app_name,,}"
+            local_app_tag="${local_app_tag// /-}"
+            local_brand_tag="${brand,,}"
+            local_brand_tag="${local_brand_tag// /-}"
+            files_prefix="${local_app_tag}-${local_brand_tag}"
+
+            version_f="${app_ver// /}"
+            version_f="${version_f#v}"
+            release_tag="${files_prefix}-v${version_f}"
+
+            downloads=""
+            for f in build/${files_prefix}-v*.apk build/${files_prefix}-magisk-v*.zip; do
+              [ -f "$f" ] || continue
+              fname=$(basename "$f")
+              dl_url="${REPO_URL}/releases/download/${release_tag}/${fname}"
+              if [[ "$fname" == *.apk ]]; then
+                downloads="${downloads}📦 <a href=\"${dl_url}\">${fname}</a>
+          "
+              elif [[ "$fname" == *.zip ]]; then
+                downloads="${downloads}🗜 <a href=\"${dl_url}\">${fname}</a>
+          "
+              fi
+            done
+
+            MSG="<b>🔄 New Update</b>
+
+          <b>${app_name} ${brand}</b>  <code>${app_ver}</code>
+
+          <b>Patches</b> <code>${patches_display}</code>
+          <b>${cli_name}</b> <code>${cli_ver_display}</code>
+
+          📋 ${patches_link} · ${cli_link}
+
+          ${downloads}"
+
+            send_tg "$MSG"
+
+          done < temp/build_success.log
