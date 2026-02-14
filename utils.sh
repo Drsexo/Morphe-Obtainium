@@ -145,22 +145,6 @@ get_prebuilts() {
 				fi
 				pr "Could not detect patch extension from CLI, using: $PATCH_EXT" >&2
 			fi
-		elif [ "$tag" = "Patches" ]; then
-			if [ "$REMOVE_RV_INTEGRATIONS_CHECKS" = true ]; then
-				local inner_ext="${ext%p}e"
-				(
-					mkdir -p "${file}-zip" || exit 1
-					unzip -qo "${file}" -d "${file}-zip" || exit 1
-					if [ -f "${file}-zip/extensions/shared.${inner_ext}" ]; then
-						java -cp "${BIN_DIR}/paccer.jar:${BIN_DIR}/dexlib2.jar" com.jhc.Main "${file}-zip/extensions/shared.${inner_ext}" "${file}-zip/extensions/shared-patched.${inner_ext}" || exit 1
-						mv -f "${file}-zip/extensions/shared-patched.${inner_ext}" "${file}-zip/extensions/shared.${inner_ext}" || exit 1
-						rm "${file}" || exit 1
-						cd "${file}-zip" || exit 1
-						zip -0rq "${CWD}/${file}" . || exit 1
-					fi
-				) >&2 || epr "Patching revanced-integrations failed (non-fatal)"
-				rm -rf "${file}-zip" || :
-			fi
 		fi
 		echo -n "$file "
 	done
