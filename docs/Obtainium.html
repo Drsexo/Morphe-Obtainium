@@ -284,10 +284,10 @@
                         includePrereleases: false,
                         fallbackToOlderReleases: true,
                         filterReleaseTitlesByRegEx: "^X Piko$",
-                        versionExtractionRegEx: "x-piko-v([0-9.]+)",
+                        versionExtractionRegEx: "x-piko-v([0-9.]+(?:-release\\.[0-9]+)?)",
                         matchGroupToUse: "1",
                         versionDetection: true,
-                        apkFilterRegEx: "x-piko-v[0-9.]+-arm64-v8a\\.apk$",
+                        apkFilterRegEx: "x-piko-v.*-arm64-v8a\\.apk$",
                         autoApkFilterByArch: false,
                         appName: "X Piko"
                     }

@@ -229,7 +229,7 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 	elif [[ "$brand_lower" == *"piko"* ]]; then
 		cli_name="ReVanced CLI"
 		patches_changelog="[Patches](https://github.com/crimera/piko/releases)"
-		cli_changelog="[CLI](https://github.com/revanced/revanced-cli/releases)"
+		cli_changelog="[CLI](https://github.com/inotia00/revanced-cli/releases)"
 	else
 		cli_name="ReVanced CLI"
 		patches_changelog="[Patches](https://github.com/ReVanced/revanced-patches/releases)"
