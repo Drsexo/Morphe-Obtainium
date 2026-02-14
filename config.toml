@@ -8,6 +8,7 @@ patches-version = "latest"
 cli-version = "dev"
 arch = "arm64-v8a"
 riplib = true
+version = "latest"
 
 
 
@@ -15,7 +16,6 @@ riplib = true
 app-name = "YouTube"
 brand = "Morphe"
 build-mode = "both"
-version = "latest"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube"
 uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 
@@ -24,7 +24,6 @@ uptodown-dlurl = "https://youtube.en.uptodown.com/android"
 app-name = "YouTube Music"
 brand = "Morphe"
 build-mode = "both"
-version = "latest"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/youtube-music"
 uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 
@@ -33,6 +32,15 @@ uptodown-dlurl = "https://youtube-music.en.uptodown.com/android"
 app-name = "Reddit"
 brand = "Morphe"
 build-mode = "apk"
-version = "latest"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
 uptodown-dlurl = "https://reddit-official-app.en.uptodown.com/android"
+
+
+[X-Piko]
+app-name = "X"
+brand = "Piko"
+build-mode = "apk"
+patches-source = "crimera/piko"
+cli-source = "inotia00/revanced-cli"
+uptodown-dlurl = "https://twitter.en.uptodown.com/android"
+apkmirror-dlurl = "https://apkmirror.com/apk/x-corp/twitter"

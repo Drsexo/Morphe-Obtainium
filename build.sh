@@ -38,8 +38,9 @@ mkdir -p "$TEMP_DIR" "$BUILD_DIR"
 
 BUILD_MORPHE="${BUILD_MORPHE:-true}"
 BUILD_REVANCED="${BUILD_REVANCED:-true}"
+BUILD_PIKO="${BUILD_PIKO:-true}"
 
-pr "Build configuration: Morphe=$BUILD_MORPHE, ReVanced=$BUILD_REVANCED"
+pr "Build configuration: Morphe=$BUILD_MORPHE, ReVanced=$BUILD_REVANCED, Piko=$BUILD_PIKO"
 
 : > "$TEMP_DIR/build_success.log"
 : > "$TEMP_DIR/build_failed.log"
@@ -83,6 +84,10 @@ for table_name in $(toml_get_table_names); do
 	fi
 	if [[ "$brand_lower" == *"revanced"* ]] && [ "$BUILD_REVANCED" != "true" ]; then
 		pr "Skipping ${table_name} (no ReVanced patches update)"
+		continue
+	fi
+	if [[ "$brand_lower" == *"piko"* ]] && [ "$BUILD_PIKO" != "true" ]; then
+		pr "Skipping ${table_name} (no Piko patches update)"
 		continue
 	fi
 
@@ -209,16 +214,41 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 	version_f=${version_f#v}
 	release_tag="${release_tag_base}-v${version_f}"
 
-	brand_lower="${brand,,}"
-	if [[ "$brand_lower" == *"morphe"* ]]; then
-		changelog_link="[Morphe Patches Changelog](https://github.com/MorpheApp/morphe-patches/releases)"
-	else
-		changelog_link="[ReVanced Patches Changelog](https://github.com/ReVanced/revanced-patches/releases)"
-	fi
-
 	patches_display="${patches_ver}"
 	patches_display="${patches_display%.rvp}"
 	patches_display="${patches_display%.mpp}"
+
+	# Determine CLI name from patches source
+	brand_lower="${brand,,}"
+	cli_name=""
+	patches_changelog=""
+	cli_changelog=""
+	if [[ "$brand_lower" == *"morphe"* ]]; then
+		cli_name="Morphe CLI"
+		patches_changelog="[Patches](https://github.com/MorpheApp/morphe-patches/releases)"
+		cli_changelog="[CLI](https://github.com/MorpheApp/morphe-cli/releases)"
+	elif [[ "$brand_lower" == *"piko"* ]]; then
+		cli_name="ReVanced CLI"
+		patches_changelog="[Patches](https://github.com/crimera/piko/releases)"
+		cli_changelog="[CLI](https://github.com/revanced/revanced-cli/releases)"
+	else
+		cli_name="ReVanced CLI"
+		patches_changelog="[Patches](https://github.com/ReVanced/revanced-patches/releases)"
+		cli_changelog="[CLI](https://github.com/revanced/revanced-cli/releases)"
+	fi
+
+	# Get CLI version from the jar filename
+	cli_ver_display=""
+	if [ -f "$TEMP_DIR/build_success.log" ]; then
+		# Try to find CLI jar version from temp directory
+		for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/revanced-cli-*.jar; do
+			if [ -f "$cli_file" ]; then
+				cli_base=$(basename "$cli_file")
+				cli_ver_display=$(echo "$cli_base" | sed 's/.*cli-\([0-9.]*\).*/\1/')
+				break
+			fi
+		done
+	fi
 
 	needs_microg=false
 	app_name_lower="${app_name,,}"
@@ -227,22 +257,28 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 	fi
 
 	{
-		echo "### 📦 Version \`${version}\`"
+		echo "<div align=\"center\">"
 		echo ""
-		echo "**Patches** · \`${patches_display}\`"
+		echo "### \`${version}\`"
 		echo ""
-		echo "**Date** · \`${BUILD_DATE}\`"
+		echo "</div>"
 		echo ""
-		echo "---"
+		echo "**Patches** \`${patches_display}\`"
+		if [ -n "$cli_ver_display" ]; then
+			echo "**${cli_name}** \`${cli_ver_display}\`"
+		fi
+		echo "**Date** \`${BUILD_DATE}\`"
 		echo ""
-		echo "📋 ${changelog_link}"
+		echo "📋 Changelogs: ${patches_changelog} · ${cli_changelog}"
 		if [ "$needs_microg" = true ]; then
 			echo ""
-			echo "---"
+			echo "<sub>"
 			echo ""
-			echo "> ⚠️ **Non-root:** Install [MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases) for Google login"
-			echo ">"
-			echo "> 🔧 **Root:** Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach from Play Store"
+			echo "⚠️ **Non-root:** Install [MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases) for Google login"
+			echo ""
+			echo "🔧 **Root:** Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach from Play Store"
+			echo ""
+			echo "</sub>"
 		fi
 	} > "$TEMP_DIR/release_notes/${release_tag_base}.md"
 

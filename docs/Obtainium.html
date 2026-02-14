@@ -83,6 +83,7 @@
         .app-ytmusic { --brand-color: #ff0000; }
         .app-reddit { --brand-color: #ff4500; }
         .app-microg { --brand-color: #4285f4; }
+        .app-x { --brand-color: #000000; }
         .app-card.app-youtube:hover { border-color: #ff0000; background: rgba(255, 0, 0, 0.05); }
         .app-card.app-youtube::before { background: #ff0000; }
         .app-card.app-ytmusic:hover { border-color: #ff0000; background: rgba(255, 0, 0, 0.05); }
@@ -91,6 +92,8 @@
         .app-card.app-reddit::before { background: #ff4500; }
         .app-card.app-microg:hover { border-color: #4285f4; background: rgba(66, 133, 244, 0.05); }
         .app-card.app-microg::before { background: #4285f4; }
+        .app-card.app-x:hover { border-color: #1da1f2; background: rgba(29, 161, 242, 0.05); }
+        .app-card.app-x::before { background: #1da1f2; }
         .app-icon {
             width: 56px; height: 56px; border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
@@ -137,6 +140,7 @@
         .app-card:nth-child(2) { animation-delay: 0.2s; }
         .app-card:nth-child(3) { animation-delay: 0.3s; }
         .app-card:nth-child(4) { animation-delay: 0.4s; }
+        .app-card:nth-child(5) { animation-delay: 0.5s; }
         @media (max-width: 600px) {
             .title { font-size: 1.5rem; }
             .app-icon { width: 48px; height: 48px; }
@@ -261,6 +265,31 @@
                         apkFilterRegEx: "reddit-morphe-v[0-9.]+-arm64-v8a\\.apk$",
                         autoApkFilterByArch: false,
                         appName: "Reddit Morphe"
+                    }
+                }
+            },
+            {
+                name: "X Piko",
+                desc: "X/Twitter with Piko patches",
+                cssClass: "app-x",
+                iconBg: "linear-gradient(135deg, #000000 0%, #1a1a1a 100%)",
+                iconSvg: '<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>',
+                config: {
+                    id: "com.twitter.android",
+                    url: "https://github.com/Drsexo/Morphe-Obtainium",
+                    author: "Drsexo",
+                    name: "X Piko",
+                    preferredApkIndex: 0,
+                    additionalSettings: {
+                        includePrereleases: false,
+                        fallbackToOlderReleases: true,
+                        filterReleaseTitlesByRegEx: "^X Piko$",
+                        versionExtractionRegEx: "x-piko-v([0-9.]+)",
+                        matchGroupToUse: "1",
+                        versionDetection: true,
+                        apkFilterRegEx: "x-piko-v[0-9.]+-arm64-v8a\\.apk$",
+                        autoApkFilterByArch: false,
+                        appName: "X Piko"
                     }
                 }
             },

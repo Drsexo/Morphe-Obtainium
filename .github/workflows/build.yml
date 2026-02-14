@@ -13,6 +13,7 @@ jobs:
       SHOULD_BUILD: ${{ steps.check_updates.outputs.SHOULD_BUILD }}
       BUILD_MORPHE: ${{ steps.check_updates.outputs.BUILD_MORPHE }}
       BUILD_REVANCED: ${{ steps.check_updates.outputs.BUILD_REVANCED }}
+      BUILD_PIKO: ${{ steps.check_updates.outputs.BUILD_PIKO }}
       LAST_BUILD_DATE: ${{ steps.check_updates.outputs.LAST_BUILD_DATE }}
     steps:
       - name: Checkout
@@ -26,14 +27,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IS_MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
         run: |
-          # Get last build date from the most recent release across all tags
           LAST_BUILD_DATE=$(gh release list -L 20 --json createdAt -q '[.[].createdAt] | sort | last' 2>/dev/null | cut -d'T' -f1 || echo "")
 
           if [ -z "$LAST_BUILD_DATE" ] || ! date -d "$LAST_BUILD_DATE" &>/dev/null 2>&1; then
             LAST_BUILD_DATE=$(date -u -d "30 days ago" +%Y-%m-%d)
-            echo "No valid previous build date found, using: $LAST_BUILD_DATE"
-          else
-            echo "Last build date: $LAST_BUILD_DATE"
           fi
           echo "LAST_BUILD_DATE=$LAST_BUILD_DATE" >> $GITHUB_OUTPUT
 
@@ -42,38 +39,42 @@ jobs:
             echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
             echo "BUILD_MORPHE=true" >> $GITHUB_OUTPUT
             echo "BUILD_REVANCED=true" >> $GITHUB_OUTPUT
+            echo "BUILD_PIKO=true" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          echo "Scheduled run - checking for patch updates..."
+          BUILD_MORPHE="false"
+          BUILD_REVANCED="false"
+          BUILD_PIKO="false"
 
           MORPHE_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
             "https://api.github.com/repos/MorpheApp/morphe-patches/releases" | \
             jq -r --arg since "$LAST_BUILD_DATE" \
             '[.[] | select(.prerelease == false and .published_at > $since)] | length')
-
           if [ "$MORPHE_RELEASES" -gt 0 ]; then
             echo "Found $MORPHE_RELEASES new Morphe patches release(s)"
             BUILD_MORPHE="true"
-          else
-            echo "No new Morphe patches releases"
-            BUILD_MORPHE="false"
           fi
 
           REVANCED_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
             "https://api.github.com/repos/ReVanced/revanced-patches/releases" | \
             jq -r --arg since "$LAST_BUILD_DATE" \
             '[.[] | select(.prerelease == false and .published_at > $since)] | length')
-
           if [ "$REVANCED_RELEASES" -gt 0 ]; then
             echo "Found $REVANCED_RELEASES new ReVanced patches release(s)"
             BUILD_REVANCED="true"
-          else
-            echo "No new ReVanced patches releases"
-            BUILD_REVANCED="false"
           fi
 
-          if [ "$BUILD_MORPHE" = "true" ] || [ "$BUILD_REVANCED" = "true" ]; then
+          PIKO_RELEASES=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/crimera/piko/releases" | \
+            jq -r --arg since "$LAST_BUILD_DATE" \
+            '[.[] | select(.prerelease == false and .published_at > $since)] | length')
+          if [ "$PIKO_RELEASES" -gt 0 ]; then
+            echo "Found $PIKO_RELEASES new Piko patches release(s)"
+            BUILD_PIKO="true"
+          fi
+
+          if [ "$BUILD_MORPHE" = "true" ] || [ "$BUILD_REVANCED" = "true" ] || [ "$BUILD_PIKO" = "true" ]; then
             echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
           else
             echo "SHOULD_BUILD=0" >> $GITHUB_OUTPUT
@@ -81,6 +82,7 @@ jobs:
 
           echo "BUILD_MORPHE=$BUILD_MORPHE" >> $GITHUB_OUTPUT
           echo "BUILD_REVANCED=$BUILD_REVANCED" >> $GITHUB_OUTPUT
+          echo "BUILD_PIKO=$BUILD_PIKO" >> $GITHUB_OUTPUT
 
       - name: Clear old workflow runs
         env:
@@ -124,6 +126,7 @@ jobs:
           LAST_BUILD_DATE: ${{ needs.check.outputs.LAST_BUILD_DATE }}
           BUILD_MORPHE: ${{ needs.check.outputs.BUILD_MORPHE }}
           BUILD_REVANCED: ${{ needs.check.outputs.BUILD_REVANCED }}
+          BUILD_PIKO: ${{ needs.check.outputs.BUILD_PIKO }}
 
       - name: Check if build produced any files
         id: check_build
