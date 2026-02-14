@@ -9,14 +9,15 @@ Automated builder for Morphe apps with Obtainium support.  Enhanced for **person
 Based on [j-hc's revanced builder](https://github.com/j-hc/revanced-magisk-module)
 
 ## 📦 Apps Built
-| App | Patches | Build Mode | Obtainium |
-|:--------|:---|:---|:---:|
-| <img src="https://play-lh.googleusercontent.com/6am0i3walYwNLc08QOOhRJttQENNGkhlKajXSERf3JnPVRQczIyxw2w3DxeMRTOSdsY=s48-rw" width="20" height="20"> **YouTube** | Morphe | APK + Module | [![Add][badge]][obt] |
-| <img src="https://play-lh.googleusercontent.com/zD8UA5CRdiPzbvTwGKtzR4KjQpxqEK6X0tGDpzEaOo0xPEvG6HUiC_0qkpTfzpuMTqU=s48-rw" width="20" height="20"> **YouTube Music** | Morphe | APK + Module | [![Add][badge]][obt] |
-| <img src="https://play-lh.googleusercontent.com/NaFAbO7ExS4NRAvt2GYkNY6OQf9oVXwmdMTZzA6zrgjjSxhQuTCnjHyf7TgYcoSGqQ=s48-rw" width="20" height="20"> **Reddit** | Morphe | APK | [![Add][badge]][obt] |
-| <img src="https://play-lh.googleusercontent.com/XyI6Hyz9AFg7E_joVzX2zh6CpWm9B2DG2JuEz5meCFVm4-wTKTnHgqbmg62iFKe4Gzca=s48-rw" width="20" height="20"> **X (Twitter)** | Piko | APK | [![Add][badge]][obt] |  
 
-[badge]: https://img.shields.io/badge/Obtainium-Add?style=flat-square&logo=Obtainium&logoColor=%23ffffff&logoSize=auto&color=%237028E7
+| App | Patches | Build Mode | Obtainium |
+|:--------:|:---|:---|:---:|
+| <img src="docs/youtube.png" width="20" height="20"> **YouTube** | Morphe | APK + Module | [![Add][badge]][obt] |
+| <img src="docs/music.png" width="20" height="20"> **YouTube Music** | Morphe | APK + Module | [![Add][badge]][obt] |
+| <img src="docs/reddit.png" width="20" height="20"> **Reddit** | Morphe | APK | [![Add][badge]][obt] |
+| <img src="docs/x.png" width="20" height="20"> **X (Twitter)** | Piko | APK | [![Add][badge]][obt] |
+
+[badge]: https://img.shields.io/badge/Add-Add?style=flat-square&logo=Obtainium&logoColor=%23ffffff&logoSize=auto&color=%237028E7
 [obt]: https://drsexo.github.io/Morphe-Obtainium/Obtainium.html
 
 ## 📅 Build Schedule

@@ -218,7 +218,6 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 	patches_display="${patches_display%.rvp}"
 	patches_display="${patches_display%.mpp}"
 
-	# Determine CLI name from patches source
 	brand_lower="${brand,,}"
 	cli_name=""
 	patches_changelog=""
@@ -237,18 +236,24 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 		cli_changelog="[CLI](https://github.com/revanced/revanced-cli/releases)"
 	fi
 
-	# Get CLI version from the jar filename
 	cli_ver_display=""
-	if [ -f "$TEMP_DIR/build_success.log" ]; then
-		# Try to find CLI jar version from temp directory
-		for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/revanced-cli-*.jar; do
-			if [ -f "$cli_file" ]; then
-				cli_base=$(basename "$cli_file")
-				cli_ver_display=$(echo "$cli_base" | sed 's/.*cli-\([0-9.]*\).*/\1/')
-				break
-			fi
-		done
-	fi
+	for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/revanced-cli-*.jar; do
+		if [ -f "$cli_file" ]; then
+			cli_base=$(basename "$cli_file")
+			cli_ver_display=$(echo "$cli_base" | sed 's/.*cli-\([0-9.]*\).*/\1/')
+			break
+		fi
+	done
+
+	# Map app name to icon filename
+	app_icon=""
+	raw_base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY:-Drsexo/Morphe-Obtainium}/main/docs"
+	case "${app_name,,}" in
+		"youtube") app_icon="${raw_base}/youtube.png" ;;
+		"youtube music") app_icon="${raw_base}/music.png" ;;
+		"reddit") app_icon="${raw_base}/reddit.png" ;;
+		"x") app_icon="${raw_base}/x.png" ;;
+	esac
 
 	needs_microg=false
 	app_name_lower="${app_name,,}"
@@ -259,7 +264,11 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 	{
 		echo "<div align=\"center\">"
 		echo ""
-		echo "### \`${version}\`"
+		if [ -n "$app_icon" ]; then
+			echo "<img src=\"${app_icon}\" width=\"100\" height=\"100\">"
+			echo ""
+		fi
+		echo "### **${version}**"
 		echo ""
 		echo "</div>"
 		echo ""
