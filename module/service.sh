@@ -13,7 +13,7 @@ run() {
         do sleep 2; done
 
         if [ $SVCL != 0 ]; then
-                err "app not installed"
+                desc_err "app not installed"
                 return
         fi
         sleep 4

@@ -1,9 +1,5 @@
 
-/module/webroot
-
-/build
-test*
-/logs
-build.md
+/module/webroot/
+ild.md
 cmpr
 *-temporary-files

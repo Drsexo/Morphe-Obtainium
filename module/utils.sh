@@ -18,7 +18,7 @@ detect_root_solution() {
 
 ROOT_SOL=${ROOT_SOL:-$(detect_root_solution)}
 
-err() {
+desc_err() {
         [ ! -f "$MODDIR/err" ] && cp "$MODDIR/module.prop" "$MODDIR/err"
         sed -i "s/^des.*/description=⚠️ Needs reflash: '${1}'/g" "$MODDIR/module.prop"
 }
@@ -76,12 +76,12 @@ susfs_hide_mount() {
 
 mount_rv() {
         if [ ! -d "${1}/lib" ]; then
-                err "mount failed. Dont report this, consider using rvmm-zygisk-mount"
+                desc_err "mount failed. Dont report this, consider using rvmm-zygisk-mount"
                 return 1
         fi
         VERSION=$(get_app_version)
         if [ "$VERSION" != "$PKG_VER" ] && [ "$VERSION" ]; then
-                err "version mismatch (installed:${VERSION}, module:$PKG_VER)"
+                desc_err "version mismatch (installed:${VERSION}, module:$PKG_VER)"
                 return 1
         fi
         if grep -q " ${1}/base.apk " /proc/mounts 2>/dev/null; then
@@ -93,11 +93,11 @@ mount_rv() {
                 done
         fi
         if ! chcon u:object_r:apk_data_file:s0 "$RVPATH"; then
-                err "apk not found"
+                desc_err "apk not found"
                 return 1
         fi
         if ! mount_bind "$RVPATH" "${1}/base.apk"; then
-                err "mount failed"
+                desc_err "mount failed"
                 return 1
         fi
         susfs_hide_mount "${1}/base.apk"
