@@ -44,9 +44,14 @@ wpr() {
         echo >&2 -e "\033[0;33m[!] ${1}\033[0m"
         if [ "${GITHUB_REPOSITORY-}" ]; then echo >&2 "::warning::${1}"; fi
 }
+
+_clean_tmp() {
+        rm -rf ./${TEMP_DIR}/*tmp.* ./${TEMP_DIR}/*tmp_* ./${TEMP_DIR}/*/*tmp.* ./${TEMP_DIR}/*-temporary-files ./*-temporary-files
+}
+
 abort() {
         epr "ABORT: ${1-}"
-        rm -rf ./${TEMP_DIR}/*tmp.* ./${TEMP_DIR}/*/*tmp.* ./${TEMP_DIR}/*-temporary-files ./*-temporary-files
+        _clean_tmp
         trap - SIGTERM SIGINT EXIT
         kill -9 -- -$$ 2>/dev/null
         exit 1
@@ -689,8 +694,7 @@ get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)"
 
 dl_archive() {
         local url=$1 version=$2 output=$3 arch=$4
-        local path output_m
-        version=${version// /}
+        local path version=${version// /}
 
         if [ -f "${output}.apkm" ]; then
                 merge_splits "${output}.apkm" "$output" "${arch}"
@@ -699,13 +703,10 @@ dl_archive() {
 
         path=$(grep -m1 "${version#v}-${arch// /}" <<<"$__ARCHIVE_RESP__") || return 1
         if [ "${path##*.}" = "apkm" ]; then
-                output_m="${output}.apkm"
+                req "${url}/${path}" "${output}.apkm" || return 1
+                merge_splits "${output}.apkm" "$output" "${arch}"
         else
-                output_m=$output
-        fi
-        req "${url}/${path}" "$output_m" || return 1
-        if [ "${path##*.}" = "apkm" ]; then
-                merge_splits "$output_m" "$output" "${arch}"
+                req "${url}/${path}" "$output" || return 1
         fi
 }
 get_archive_resp() {
@@ -719,6 +720,10 @@ get_archive_pkg_name() { echo "$__ARCHIVE_PKG_NAME__"; }
 
 dl_direct() {
         local url=$1 version=${2// /-} output=$3 arch=$4 _dpi=$5
+        if ! grep -q "${version_f#v}-${arch// /}" <<<"$url"; then
+                epr "Given direct-dlurl for $output is not compatible. Set proper 'arch' and 'version' options."
+                return 1
+        fi
         if [[ "$url" == *.apkm ]]; then
                 req "$url" "${output}.apkm" || return 1
                 merge_splits "${output}.apkm" "${output}" "${arch}"

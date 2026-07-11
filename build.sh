@@ -172,7 +172,7 @@ for table_name in $(toml_get_table_names); do
         build_rv "$(declare -p app_args)" &
 done
 wait || true
-rm -rf temp/tmp.*
+_clean_tmp
 
 BUILD_DATE=$(date -u +%Y-%m-%d)
 REPO_URL="https://github.com/${GITHUB_REPOSITORY:-Drsexo/Morphe-Obtainium}"

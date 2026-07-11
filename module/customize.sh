@@ -87,9 +87,13 @@ install() {
                 if [ "$install_err" ]; then break; fi
                 if ! op=$(pmex install-commit "$SES"); then
                         ui_print "$op"
-                        if echo "$op" | grep -q -e INSTALL_FAILED_VERSION_DOWNGRADE -e INSTALL_FAILED_UPDATE_INCOMPATIBLE; then
+                        if echo "$op" | grep -q -e INSTALL_FAILED_VERSION_DOWNGRADE -e INSTALL_FAILED_UPDATE_INCOMPATIBLE -e INSTALL_FAILED_DUPLICATE; then
                                 ui_print "* Uninstalling..."
-                                if ! op=$(pmex uninstall "$PKG_NAME"); then
+                                ex_unins_arg=""
+                                if echo "$op" | grep -q INSTALL_FAILED_DUPLICATE; then
+                                        ex_unins_arg="-k"
+                                fi
+                                if ! op=$(pmex uninstall --user 0 $ex_unins_arg "$PKG_NAME"); then
                                         ui_print "$op"
                                         if [ $IT = 2 ]; then
                                                 install_err="ERROR: pm uninstall failed."
