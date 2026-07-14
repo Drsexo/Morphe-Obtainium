@@ -18,9 +18,12 @@ detect_root_solution() {
 
 ROOT_SOL=${ROOT_SOL:-$(detect_root_solution)}
 
-desc_err() {
-        [ ! -f "$MODDIR/err" ] && cp "$MODDIR/module.prop" "$MODDIR/err"
-        sed -i "s/^des.*/description=⚠️ Needs reflash: '${1}'/g" "$MODDIR/module.prop"
+ch_desc() {
+        sed -i "s/^des.*/description=${1}/g" "$MODDIR/module.prop"
+}
+
+ch_desc_err() {
+        ch_desc "⚠️ Needs reflash: '${1}'"
 }
 
 pmex() {
@@ -74,14 +77,18 @@ susfs_hide_mount() {
         fi
 }
 
+get_mounts() {
+        grep -F "$PKG_NAME" /proc/mounts 2>/dev/null || :
+}
+
 mount_rv() {
         if [ ! -d "${1}/lib" ]; then
-                desc_err "mount failed. Dont report this, consider using rvmm-zygisk-mount"
+                ch_desc_err "Mount failed. Dont report this, consider using rvmm-zygisk-mount"
                 return 1
         fi
         VERSION=$(get_app_version)
         if [ "$VERSION" != "$PKG_VER" ] && [ "$VERSION" ]; then
-                desc_err "version mismatch (installed:${VERSION}, module:$PKG_VER)"
+                ch_desc_err "Version mismatch (installed:${VERSION}, module:$PKG_VER)"
                 return 1
         fi
         if grep -q " ${1}/base.apk " /proc/mounts 2>/dev/null; then
@@ -93,15 +100,23 @@ mount_rv() {
                 done
         fi
         if ! chcon u:object_r:apk_data_file:s0 "$RVPATH"; then
-                desc_err "apk not found"
+                ch_desc_err "Apk not found"
                 return 1
         fi
         if ! mount_bind "$RVPATH" "${1}/base.apk"; then
-                desc_err "mount failed"
+                ch_desc_err "Mount failed"
                 return 1
         fi
         susfs_hide_mount "${1}/base.apk"
         am force-stop "$PKG_NAME"
-        [ -f "$MODDIR/err" ] && mv -f "$MODDIR/err" "$MODDIR/module.prop"
+        cp -f "$MODDIR/module.prop.orig" "$MODDIR/module.prop"
         return 0
+}
+
+mount_nosleep() {
+        if ! BASEPATH=$(get_basepath); then
+                ch_desc_err "App not installed"
+                return 1
+        fi
+        mount_rv "$BASEPATH"
 }

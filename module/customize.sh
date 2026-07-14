@@ -135,7 +135,6 @@ fi
 set_perm "$MODPATH/base.apk" 1000 1000 644 u:object_r:apk_data_file:s0
 
 ui_print "* Mounting $PKG_NAME"
-# move out the apk from /data/adb/modules/.. to /data/adb/Morphe-Module to not trip some root detections
 mkdir -p "$RV_DIR"
 mv -f "$MODPATH/base.apk" "$RVPATH"
 
@@ -172,6 +171,7 @@ if [ "$KSU" ] || [ -f /data/adb/ksu/bin/ksud ]; then
 fi
 
 rm -rf "${MODPATH:?}/bin" "$MODPATH/stock/"
+cp -f "$MODPATH/module.prop" "$MODPATH/module.prop.orig"
 
 ui_print "* Done"
 ui_print "  by Drsexo (github.com/Drsexo)"
