@@ -108,7 +108,7 @@ for table_name in $(toml_get_table_names); do
                 echo "${table_name}|FAILED|Could not download prebuilts" >> "$TEMP_DIR/build_failed.log"
                 continue
         fi
-        read -r cli_jar patches_jar <<<"$PREBUILTS"
+        read -r patches_jar cli_jar <<<"$PREBUILTS"
         app_args[cli]=$cli_jar
         app_args[ptjar]=$patches_jar
         app_args[patches_src]=$patches_src
