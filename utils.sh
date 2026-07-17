@@ -96,7 +96,7 @@ get_prebuilts() {
                         local grab_cl=false
                 elif [ "$tag" = "Patches" ]; then
                         file=$(find "$dir" -maxdepth 1 -name "*patches-${name_ver#v}.*" -type f 2>/dev/null)
-                        local grab_cl=false
+                        local grab_cl=true
                 else abort unreachable; fi
 
                 local url tag_name matches
@@ -789,7 +789,7 @@ get_sorted_versions() {
 extract_cli_version() {
         local cli_base
         cli_base=$(basename "$1")
-        echo "$cli_base" | sed 's/.*cli-//; s/-all\.jar$//'
+        echo "$cli_base" | sed 's/.*\(cli\|desktop\)-//; s/-all\.jar$//'
 }
 
 extract_patches_version() {

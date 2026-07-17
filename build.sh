@@ -29,7 +29,7 @@ fi
 DEF_PATCHES_VER=$(toml_get "$main_config_t" patches-version) || DEF_PATCHES_VER="latest"
 DEF_CLI_VER=$(toml_get "$main_config_t" cli-version) || DEF_CLI_VER="latest"
 DEF_PATCHES_SRC=$(toml_get "$main_config_t" patches-source) || DEF_PATCHES_SRC="MorpheApp/morphe-patches"
-DEF_CLI_SRC=$(toml_get "$main_config_t" cli-source) || DEF_CLI_SRC="MorpheApp/morphe-cli"
+DEF_CLI_SRC=$(toml_get "$main_config_t" cli-source) || DEF_CLI_SRC="MorpheApp/morphe-desktop"
 DEF_RV_BRAND=$(toml_get "$main_config_t" brand) || DEF_RV_BRAND=$(toml_get "$main_config_t" rv-brand) || DEF_RV_BRAND="Morphe"
 DEF_RIPLIB=$(toml_get "$main_config_t" riplib) || DEF_RIPLIB="true"
 mkdir -p "$TEMP_DIR" "$BUILD_DIR"
@@ -205,7 +205,7 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
                 else
                         patches_changelog="[Patches](https://github.com/MorpheApp/morphe-patches/releases)"
                 fi
-                cli_changelog="[CLI](https://github.com/MorpheApp/morphe-cli/releases)"
+                cli_changelog="[CLI](https://github.com/MorpheApp/morphe-desktop/releases)"
         else
                 cli_name="ReVanced CLI"
                 patches_changelog="[Patches](https://github.com/ReVanced/revanced-patches/releases)"
@@ -213,7 +213,7 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
         fi
 
         cli_ver_display=""
-        for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/revanced-cli-*.jar; do
+        for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/morphe-desktop-*.jar "$TEMP_DIR"/*/revanced-cli-*.jar; do
                 if [ -f "$cli_file" ]; then
                         cli_ver_display=$(extract_cli_version "$cli_file")
                         break

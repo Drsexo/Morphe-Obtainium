@@ -353,7 +353,7 @@ jobs:
           fi
 
           extract_cli_version() {
-            basename "$1" | sed 's/.*cli-//; s/-all\.jar$//'
+            basename "$1" | sed 's/.*\(cli\|desktop\)-//; s/-all\.jar$//'
           }
 
           REPO_URL="${{ github.server_url }}/${{ github.repository }}"
@@ -393,7 +393,7 @@ jobs:
               else
                 patches_link='<a href="https://github.com/MorpheApp/morphe-patches/releases">Patches</a>'
               fi
-              cli_link='<a href="https://github.com/MorpheApp/morphe-cli/releases">CLI</a>'
+              cli_link='<a href="https://github.com/MorpheApp/morphe-desktop/releases">CLI</a>'
             else
               cli_name="ReVanced CLI"
               patches_link='<a href="https://github.com/ReVanced/revanced-patches/releases">Patches</a>'
@@ -401,7 +401,7 @@ jobs:
             fi
 
             cli_ver_display=""
-            for cli_file in temp/*/morphe-cli-*.jar temp/*/revanced-cli-*.jar; do
+            for cli_file in temp/*/morphe-cli-*.jar temp/*/morphe-desktop-*.jar temp/*/revanced-cli-*.jar; do
               if [ -f "$cli_file" ]; then
                 cli_ver_display=$(extract_cli_version "$cli_file")
                 break
