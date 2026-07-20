@@ -1,7 +1,7 @@
 <div align="center">
 
 [![Title](https://readme-typing-svg.demolab.com?font=Press+Start+2P&duration=1500&pause=100&color=853BFF&center=true&multiline=true&width=530&height=120&lines=Morphe+Apps+Builder;Updated+Daily;Lightweight+APKs)](https://git.io/typing-svg)  
-![Build](https://img.shields.io/github/actions/workflow/status/Drsexo/Morphe-Obtainium/build.yml?style=for-the-badge&logo=monster&logoColor=%23ffffff&logoSize=auto&color=%237028E7)  
+[![Telegram](https://img.shields.io/badge/Telegram-853BFF?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Morphe_Obtainium_releases)  
 
 ![YouTube](https://img.shields.io/endpoint?style=flat-square&logo=youtube&logoColor=%23FF0000&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fyoutube-morphe-badge.json)
 ![YouTube Music](https://img.shields.io/endpoint?style=flat-square&logo=youtubemusic&logoColor=%23FF0000&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fyoutube-music-morphe-badge.json)
