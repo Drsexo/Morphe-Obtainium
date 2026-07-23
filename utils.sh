@@ -56,7 +56,13 @@ abort() {
         kill -9 -- -$$ 2>/dev/null
         exit 1
 }
-java() { env -i JAVA_HOME="${JAVA_HOME}" PATH="${PATH}" java --enable-native-access=ALL-UNNAMED "$@"; }
+java() {
+        if [ "${JAVA_HOME_21_X64-}" ]; then
+                env -i JAVA_HOME="$JAVA_HOME_21_X64" "$JAVA_HOME_21_X64"/bin/java --enable-native-access=ALL-UNNAMED "$@"
+        else
+                env -i java --enable-native-access=ALL-UNNAMED "$@"
+        fi
+}
 
 get_prebuilts() {
         local cli_src=$1 cli_ver=$2 patches_src=$3 patches_ver=$4
@@ -323,6 +329,7 @@ _req() {
         [ -x "$_curl" ] || _curl="curl"
         if ! "$_curl" -L -c "$TEMP_DIR/cookie.txt" -b "$TEMP_DIR/cookie.txt" --connect-timeout 10 --retry 1 --fail -s -S "$@" "$ip" -o "$dlp"; then
                 epr "Request failed: $ip"
+                if [ "$dlp" != - ]; then rm -f "$dlp"; fi
                 return 1
         fi
         if [ "$dlp" != - ]; then
