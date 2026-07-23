@@ -1,6 +1,5 @@
 #!/system/bin/sh
-MODDIR=$MODPATH
-. "$MODPATH/utils.sh"
+MODDIR="$MODPATH" . "$MODPATH/utils.sh"
 
 ui_print ""
 
@@ -88,10 +87,12 @@ install() {
                 if ! op=$(pmex install-commit "$SES"); then
                         ui_print "$op"
                         if echo "$op" | grep -q -e INSTALL_FAILED_VERSION_DOWNGRADE -e INSTALL_FAILED_UPDATE_INCOMPATIBLE -e INSTALL_FAILED_DUPLICATE; then
-                                ui_print "* Uninstalling..."
                                 ex_unins_arg=""
                                 if echo "$op" | grep -q INSTALL_FAILED_DUPLICATE; then
+                                        ui_print "* Uninstalling without data loss..."
                                         ex_unins_arg="-k"
+                                else
+                                        ui_print "* Uninstalling..."
                                 fi
                                 if ! op=$(pmex uninstall --user 0 $ex_unins_arg "$PKG_NAME"); then
                                         ui_print "$op"
@@ -135,6 +136,7 @@ fi
 set_perm "$MODPATH/base.apk" 1000 1000 644 u:object_r:apk_data_file:s0
 
 ui_print "* Mounting $PKG_NAME"
+# move out the apk from /data/adb/modules/.. to /data/adb/Morphe-Module to not trip some root detections
 mkdir -p "$RV_DIR"
 mv -f "$MODPATH/base.apk" "$RVPATH"
 
@@ -173,6 +175,6 @@ fi
 rm -rf "${MODPATH:?}/bin" "$MODPATH/stock/"
 cp -f "$MODPATH/module.prop" "$MODPATH/module.prop.orig"
 
-ui_print "* Done"
+ui_print "* Done. No need to reboot."
 ui_print "  by Drsexo (github.com/Drsexo)"
 ui_print " "
