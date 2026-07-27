@@ -1,5 +1,8 @@
-# Build 2026-07-24
+# Build 2026-07-27
 
-X-Piko — ❌  
-Instagram-Piko `435.0.0.37.76` ✅  
+YouTube-Morphe `21.29.368` ✅  
+YouTube-Music-Morphe `9.29.54` ✅  
+Reddit-Morphe `2026.29.0` ✅  
+X-Piko `12.11.1-release.0` ✅  
+Instagram-Piko — ❌  
 
