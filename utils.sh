@@ -966,7 +966,7 @@ build_rv() {
                         patcher_args+=("-e \"${disable_psu_patch}\"")
                 fi
 
-                if [ "$riplib" = true ] && [ "${args[cli_supports_striplibs]}" = true ]; then
+                if [ "$riplib" = true ] && [ "${args[cli_supports_striplibs]}" = true ] && [ "$build_mode" = "apk" ]; then
                         patcher_args+=("--striplibs arm64-v8a")
                 fi
 
