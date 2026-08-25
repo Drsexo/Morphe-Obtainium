@@ -1,6 +1,6 @@
 {
-    "version": "v21.34.243-SECONDARY (patches 1.40.0)",
+    "version": "v21.33.326 (patches 1.40.0)",
     "versionCode": 20260825,
-    "zipUrl": "https://github.com/Drsexo/Morphe-Obtainium/releases/download/youtube-morphe-v21.34.243-SECONDARY/youtube-morphe-module-v21.34.243-SECONDARY-arm64-v8a.zip",
+    "zipUrl": "https://github.com/Drsexo/Morphe-Obtainium/releases/download/youtube-morphe-v21.33.326/youtube-morphe-module-v21.33.326-arm64-v8a.zip",
     "changelog": "https://raw.githubusercontent.com/Drsexo/Morphe-Obtainium/update/build.md"
   }
