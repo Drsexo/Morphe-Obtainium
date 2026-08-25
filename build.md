@@ -1,6 +1,4 @@
-# Build 2026-08-24
+# Build 2026-08-25
 
-YouTube-Morphe `21.34.243-SECONDARY` ✅  
-YouTube-Music-Morphe `9.33.52` ✅  
-Reddit-Morphe — ❌  
+Reddit-Morphe `2026.34.0` ✅  
 
