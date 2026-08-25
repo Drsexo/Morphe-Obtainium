@@ -5,7 +5,7 @@ CWD=$(pwd)
 TEMP_DIR="temp"
 BIN_DIR="bin"
 BUILD_DIR="build"
-DL_SRCS=("direct" "uptodown" "apkmirror" "archive")
+DL_SRCS=("direct" "apkmirror" "uptodown")
 
 if [ "${GITHUB_TOKEN-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
 NEXT_VER_CODE=${NEXT_VER_CODE:-$(date +'%Y%m%d')}
@@ -554,7 +554,7 @@ merge_splits() {
         pr "Bundle after stripping:"
         unzip -l "${bundle}" 2>/dev/null | grep -i '\.apk$' | awk '{print "  " $NF " (" $1 " bytes)"}' || true
 
-        if ! OP=$(java -jar "$TEMP_DIR/apkeditor.jar" merge -i "${bundle}" -o "${bundle}.merged.apk" -clean-meta -f 2>&1); then
+        if ! OP=$(java -jar "$TEMP_DIR/apkeditor.jar" merge -i "${bundle}" -o "${bundle}.merged.apk" -clean-meta -f -extractNativeLibs true 2>&1); then
                 epr "Apkeditor ERROR: $OP"
                 return 1
         fi
@@ -571,27 +571,44 @@ apkmirror_search() {
         local resp="$1" dpi="$2" arch="$3" apk_bundle="$4"
         local dlurl="" node app_table emptyCheck
 
-        local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a' 'arm64-v8a')
+        local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a')
+        if [ "$arch" != "all" ]; then
+                apparch+=("$arch")
+        fi
 
         local appdpi=("nodpi" "anydpi")
         if [ "$dpi" ]; then
                 appdpi+=($dpi)
         fi
 
+        local fallback_url=""
         for ((n = 1; n < 40; n++)); do
-                node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" -r "span:nth-child(n+3)" <<<"$resp")
+                node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" <<<"$resp")
                 if [ -z "$node" ]; then break; fi
-                emptyCheck=$($HTMLQ -t -i "div.table-cell:nth-child(1) > a:nth-child(1)" <<<"$node" | xargs)
-                if [ -z "$emptyCheck" ]; then break; fi
-                app_table=$($HTMLQ --text --ignore-whitespace <<<"$node")
-                if [ "$(sed -n 3p <<<"$app_table")" != "$apk_bundle" ]; then continue; fi
-                dlurl=$($HTMLQ --base https://www.apkmirror.com --attributes href "div:nth-child(1) > a:nth-child(1)" <<<"$node")
-                if isoneof "$(sed -n 6p <<<"$app_table")" "${appdpi[@]}" &&
-                        isoneof "$(sed -n 4p <<<"$app_table")" "${apparch[@]}"; then
-                        echo "$dlurl"
-                        return 0
+                dlurl=$($HTMLQ --base https://www.apkmirror.com --attributes href "div.table-cell:nth-child(1) a" <<<"$node" | head -1)
+                if [ -z "$dlurl" ]; then break; fi
+
+                local node_apk_bundle node_arch node_dpi
+                node_apk_bundle=$($HTMLQ "div.table-cell:nth-child(1) span.apkm-badge:first-of-type" --text <<<"$node" | xargs)
+                [ -z "$node_apk_bundle" ] && node_apk_bundle="APK"
+
+                node_arch=$($HTMLQ "div.table-cell:nth-child(2)" --text <<<"$node" | xargs)
+                node_dpi=$($HTMLQ "div.table-cell:nth-child(4)" --text <<<"$node" | xargs)
+
+                if [ "$node_apk_bundle" != "$apk_bundle" ]; then continue; fi
+
+                if isoneof "$node_arch" "${apparch[@]}"; then
+                        if isoneof "$node_dpi" "${appdpi[@]}"; then
+                                echo "$dlurl"
+                                return 0
+                        fi
+                        [ -z "$fallback_url" ] && fallback_url=$dlurl
                 fi
         done
+        if [ -n "$fallback_url" ]; then
+                echo "$fallback_url"
+                return 0
+        fi
         if [ "$n" -eq 2 ] && [ "$dlurl" ]; then
                 echo "$dlurl"
                 return 0
@@ -607,11 +624,14 @@ dl_apkmirror() {
         local resp node app_table apkmname dlurl=""
         apkmname=$($HTMLQ "h1.marginZero" --text <<<"$__APKMIRROR_RESP__")
         apkmname="${apkmname,,}" apkmname="${apkmname// /-}" apkmname="${apkmname//[^a-z0-9-]/}"
-        url="${url}/${apkmname}-${version//./-}-release/"
+        local search_version=${version//./-}
+        search_version=${search_version//_/-}
+        search_version=${search_version,,}
+        url="${url}/${apkmname}-${search_version}-release/"
         resp=$(req "$url" -) || return 1
         node=$($HTMLQ "div.table-row.headerFont:nth-last-child(1)" -r "span:nth-child(n+3)" <<<"$resp")
         if [ "$node" ]; then
-                for type in APK BUNDLE; do
+                for type in BUNDLE APK; do
                         if dlurl=$(apkmirror_search "$resp" "$dpi" "$arch" "$type"); then
                                 if [ "$type" = "BUNDLE" ]; then
                                         is_bundle=true
@@ -643,6 +663,7 @@ get_apkmirror_vers() {
                 local IFS=$'\n'
                 local v
                 for v in $page_vers; do
+                        grep -iq '\(beta\|alpha\|secondary\)' <<<"$v" && continue
                         grep -iq "${v} \(beta\|alpha\)" <<<"$apkm_resp" || stable_vers="${stable_vers}${stable_vers:+$'\n'}${v}"
                 done
         done
@@ -772,6 +793,16 @@ patch_apk() {
         fi
 }
 
+prep_patch_input() {
+        local stock=$1 out=$2 mode=$3
+        cp -f "$stock" "$out"
+        if [ "$mode" = module ]; then
+                zip -d "$out" "lib/*" >/dev/null 2>&1 || :
+        else
+                zip -d "$out" "lib/armeabi-v7a/*" "lib/x86_64/*" "lib/x86/*" >/dev/null 2>&1 || :
+        fi
+}
+
 dl_stock_apk() {
         local stock_apk=$1 version=$2 arch=$3 dpi=$4 table=$5
         shift 5
@@ -800,7 +831,7 @@ get_sorted_versions() {
         local dl_from=$1
         local all_vers
         all_vers=$(get_"${dl_from}"_vers) || return 1
-        all_vers=$(grep -iv '\(beta\|alpha\)' <<<"$all_vers" || echo "$all_vers")
+        all_vers=$(grep -iv '\(beta\|alpha\|secondary\)' <<<"$all_vers" || echo "$all_vers")
         sort -rV <<<"$all_vers" | awk '!seen[$0]++'
 }
 
@@ -971,12 +1002,7 @@ build_rv() {
                 fi
 
                 local stock_apk_to_patch="${stock_apk}.stripped.apk"
-                cp -f "$stock_apk" "$stock_apk_to_patch"
-                if [ "$build_mode" = module ]; then
-                        zip -d "$stock_apk_to_patch" "lib/*" >/dev/null 2>&1 || :
-                else
-                        zip -d "$stock_apk_to_patch" "lib/armeabi-v7a/*" "lib/x86_64/*" "lib/x86/*" >/dev/null 2>&1 || :
-                fi
+                prep_patch_input "$stock_apk" "$stock_apk_to_patch" "$build_mode"
 
                 local apk_output="${BUILD_DIR}/${app_name_l}-${rv_brand_f}-v${version_f}-${arch_f}.apk"
                 if [ "${NORB:-}" != true ] || { [ ! -f "$patched_apk" ] && [ ! -f "$apk_output" ]; }; then
@@ -1018,12 +1044,7 @@ build_rv() {
                                                         fi
 
                                                         local fb_stripped="${fb_stock}.stripped.apk"
-                                                        cp -f "$fb_stock" "$fb_stripped"
-                                                        if [ "$build_mode" = module ]; then
-                                                                zip -d "$fb_stripped" "lib/*" >/dev/null 2>&1 || :
-                                                        else
-                                                                zip -d "$fb_stripped" "lib/armeabi-v7a/*" "lib/x86_64/*" "lib/x86/*" >/dev/null 2>&1 || :
-                                                        fi
+                                                        prep_patch_input "$fb_stock" "$fb_stripped" "$build_mode"
 
                                                         if patch_apk "$fb_stripped" "$fb_patched" "${patcher_args[*]}" "${args[cli]}" "${args[ptjar]}" "${args[shim_jar]-}"; then
                                                                 rm -f "$fb_stripped"
@@ -1097,13 +1118,17 @@ build_rv() {
                 if [ "${args[include_stock]}" != "disable" ]; then
                         mkdir -p "${base_template}/stock/"
                         if [ "${args[include_stock]}" = "merged" ]; then
+                                if [ -f "${stock_apk}.apkm" ]; then
+                                        epr "WARNING: merged stock from a bundle is UNSIGNED in this fork (no apksigner) and will fail to install. Use include-stock = \"split\"."
+                                fi
                                 cp -f "$stock_apk" "${base_template}/stock/base.apk"
                         elif [ "${args[include_stock]}" = "split" ]; then
-                                if [ ! -f "${stock_apk}.apkm" ]; then
-                                        epr "Cannot include as 'split' because stock apk of $table_name is not a bundle"
-                                        return 0
+                                if [ -f "${stock_apk}.apkm" ]; then
+                                        unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
+                                else
+                                        wpr "No bundle for '${table}', including the stock apk directly"
+                                        cp -f "$stock_apk" "${base_template}/stock/base.apk"
                                 fi
-                                unzip -j "${stock_apk}.apkm" '*.apk' -x '*x86_64.apk' -x '*x86.apk' -x '*armeabi_v7a.apk' -d "${base_template}/stock/" >/dev/null 2>&1
                         fi
                 fi
                 pushd >/dev/null "$base_template" || abort "Module template dir not found"

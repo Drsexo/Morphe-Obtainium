@@ -32,6 +32,10 @@ DEF_PATCHES_SRC=$(toml_get "$main_config_t" patches-source) || DEF_PATCHES_SRC="
 DEF_CLI_SRC=$(toml_get "$main_config_t" cli-source) || DEF_CLI_SRC="MorpheApp/morphe-desktop"
 DEF_RV_BRAND=$(toml_get "$main_config_t" brand) || DEF_RV_BRAND=$(toml_get "$main_config_t" rv-brand) || DEF_RV_BRAND="Morphe"
 DEF_RIPLIB=$(toml_get "$main_config_t" riplib) || DEF_RIPLIB="true"
+DEF_INCLUDE_STOCK=$(toml_get "$main_config_t" include-stock) || DEF_INCLUDE_STOCK="merged"
+if ! isoneof "$DEF_INCLUDE_STOCK" disable merged split; then
+        abort "ERROR: include-stock '${DEF_INCLUDE_STOCK}' is not a valid global option: only 'disable', 'merged' or 'split' is allowed"
+fi
 mkdir -p "$TEMP_DIR" "$BUILD_DIR"
 
 BUILD_FILTER="${BUILD_FILTER:-all}"
@@ -147,7 +151,7 @@ for table_name in $(toml_get_table_names); do
                 if ! isoneof "${app_args[include_stock]}" disable merged split; then
                         abort "ERROR: include-stock '${app_args[include_stock]}' is not a valid option for '${table_name}': only 'disable', 'merged' or 'split' is allowed"
                 fi
-        } || app_args[include_stock]=merged
+        } || app_args[include_stock]=$DEF_INCLUDE_STOCK
 
         unset 'app_args[dl_from]'
         for dl_from in "${DL_SRCS[@]}"; do

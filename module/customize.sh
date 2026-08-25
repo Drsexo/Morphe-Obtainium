@@ -48,7 +48,7 @@ if BASEPATH=$(get_basepath); then
         if [ "$VERSION" ] && [ "$VERSION" = "$PKG_VER" ]; then
                 ui_print "* $PKG_NAME is up-to-date ($VERSION)"
                 INS=false
-        elif [ ! -f "$MODPATH/stock/base.apk" ]; then
+        elif [ -z "$(ls "$MODPATH"/stock/*.apk 2>/dev/null)" ]; then
                 ui_print "ERROR: Version mismatch
                 installed: '$VERSION'
                 module:    '$PKG_VER'"
@@ -57,7 +57,7 @@ if BASEPATH=$(get_basepath); then
 fi
 
 install() {
-        if [ ! -f "$MODPATH/stock/base.apk" ]; then
+        if [ -z "$(ls "$MODPATH"/stock/*.apk 2>/dev/null)" ]; then
                 abort "ERROR: Stock $PKG_NAME apk was not found"
         fi
         install_err=""
@@ -78,7 +78,7 @@ install() {
 
                 for apki in "$MODPATH/stock"/*.apk; do
                         set_perm "${apki}" 1000 1000 644 u:object_r:apk_data_file:s0
-                        if ! op=$(pmex install-write -S "$SZ" "$SES" "$(basename "${apki}")" "${apki}"); then
+                        if ! op=$(pmex install-write "$SES" "$(basename "${apki}")" "${apki}"); then
                                 ui_print "ERROR: install-write failed"
                                 install_err="$op"
                                 break
@@ -127,10 +127,14 @@ BASEPATHLIB=${BASEPATH}/lib/${ARCH}
 if [ $INS = true ] || [ -z "$(ls -A1 "$BASEPATHLIB")" ]; then
         ui_print "* Extracting native libs"
         if [ ! -d "$BASEPATHLIB" ]; then mkdir -p "$BASEPATHLIB"; else rm -f "$BASEPATHLIB"/* >/dev/null 2>&1 || :; fi
-        if op=$(unzip -o -j "$MODPATH/stock/base.apk" "lib/${ARCH_LIB}/*" -d "$BASEPATHLIB" 2>&1); then
+        for apki in "$MODPATH"/stock/*.apk; do
+                [ -f "$apki" ] || continue
+                unzip -o -j "$apki" "lib/${ARCH_LIB}/*" -d "$BASEPATHLIB" >/dev/null 2>&1 || :
+        done
+        if [ -n "$(ls -A1 "$BASEPATHLIB" 2>/dev/null)" ]; then
                 set_perm_recursive "${BASEPATH}/lib" 1000 1000 755 755 u:object_r:apk_data_file:s0
         else
-                echo >&2 "ERROR: extracting native libs failed: '$op'"
+                echo >&2 "WARNING: no ${ARCH_LIB} native libs found in stock apks"
         fi
 fi
 
