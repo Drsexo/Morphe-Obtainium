@@ -1,6 +1,6 @@
 {
-    "version": "v21.36.45 (patches 1.42.0)",
-    "versionCode": 20260910,
-    "zipUrl": "https://github.com/Drsexo/Morphe-Obtainium/releases/download/youtube-morphe-v21.36.45/youtube-morphe-module-v21.36.45-arm64-v8a.zip",
+    "version": "v21.36.47 (patches 1.43.0)",
+    "versionCode": 20260915,
+    "zipUrl": "https://github.com/Drsexo/Morphe-Obtainium/releases/download/youtube-morphe-v21.36.47/youtube-morphe-module-v21.36.47-arm64-v8a.zip",
     "changelog": "https://raw.githubusercontent.com/Drsexo/Morphe-Obtainium/update/build.md"
   }
