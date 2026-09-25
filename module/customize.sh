@@ -119,11 +119,7 @@ ui_print "* Un-mounting existing binds"
 umount_all
 [ "$PREV_MODE" = nomount ] && nm_uninject
 
-if OP=$(dumpsys package "$PKG_NAME") && [ "$OP" ]; then
-        if echo "$OP" | grep -m1 pkgFlags | grep -Fq UPDATED_SYSTEM_APP; then
-                pmex uninstall-system-updates "$PKG_NAME" >/dev/null 2>&1
-        fi
-else
+if ! OP=$(dumpsys package "$PKG_NAME") || [ -z "$OP" ]; then
         if pmex install-existing "$PKG_NAME" >/dev/null 2>&1; then
                 pmex uninstall-system-updates "$PKG_NAME" >/dev/null 2>&1
         fi
@@ -187,14 +183,8 @@ install() {
                 if ! op=$(pmex install-commit "$SES"); then
                         ui_print "$op"
                         if echo "$op" | grep -q -e INSTALL_FAILED_VERSION_DOWNGRADE -e INSTALL_FAILED_UPDATE_INCOMPATIBLE -e INSTALL_FAILED_DUPLICATE; then
-                                ex_unins_arg=""
-                                if echo "$op" | grep -q INSTALL_FAILED_DUPLICATE; then
-                                        ui_print "* Uninstalling without data loss..."
-                                        ex_unins_arg="-k"
-                                else
-                                        ui_print "* Uninstalling..."
-                                fi
-                                if ! op=$(pmex uninstall --user 0 $ex_unins_arg "$PKG_NAME"); then
+                                ui_print "* Uninstalling..."
+                                if ! op=$(pmex uninstall --user 0 "$PKG_NAME"); then
                                         ui_print "$op"
                                         if [ $IT = 2 ]; then
                                                 install_err="ERROR: pm uninstall failed."

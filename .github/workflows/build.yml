@@ -101,7 +101,8 @@ jobs:
           }
 
           BUILD_MORPHE="false"
-          BUILD_PIKO="false"
+          BUILD_X="false"
+          BUILD_INSTAGRAM="false"
 
           MORPHE_PATCHES_VER=$(get_patches_version "YouTube-Morphe")
           MORPHE_LAST_VER=$(get_last_patches_ver "morphe-patches")
@@ -115,21 +116,34 @@ jobs:
             BUILD_MORPHE="true"
           fi
 
-          PIKO_PATCHES_VER=$(get_patches_version "X-Piko")
-          PIKO_LAST_VER=$(get_last_patches_ver "piko")
-          if [ "$PIKO_PATCHES_VER" = "dev" ]; then
-            PIKO_LATEST=$(get_latest_upstream_ver "crimera/piko" "true")
+          X_PATCHES_VER=$(get_patches_version "X-Piko")
+          X_LAST_VER=$(get_last_patches_ver "piko-newx")
+          if [ "$X_PATCHES_VER" = "dev" ]; then
+            X_LATEST=$(get_latest_upstream_ver "crimera/piko-newx" "true")
           else
-            PIKO_LATEST=$(get_latest_upstream_ver "crimera/piko" "false")
+            X_LATEST=$(get_latest_upstream_ver "crimera/piko-newx" "false")
           fi
-          if [ -z "$PIKO_LAST_VER" ] || [ "$PIKO_LAST_VER" != "$PIKO_LATEST" ]; then
-            echo "Piko patches: '${PIKO_LAST_VER:-none}' -> '${PIKO_LATEST}'"
-            BUILD_PIKO="true"
+          if [ -z "$X_LAST_VER" ] || [ "$X_LAST_VER" != "$X_LATEST" ]; then
+            echo "X patches (piko-newx): '${X_LAST_VER:-none}' -> '${X_LATEST}'"
+            BUILD_X="true"
+          fi
+
+          IG_PATCHES_VER=$(get_patches_version "Instagram-Piko")
+          IG_LAST_VER=$(get_last_patches_ver "piko")
+          if [ "$IG_PATCHES_VER" = "dev" ]; then
+            IG_LATEST=$(get_latest_upstream_ver "crimera/piko" "true")
+          else
+            IG_LATEST=$(get_latest_upstream_ver "crimera/piko" "false")
+          fi
+          if [ -z "$IG_LAST_VER" ] || [ "$IG_LAST_VER" != "$IG_LATEST" ]; then
+            echo "Instagram patches (piko): '${IG_LAST_VER:-none}' -> '${IG_LATEST}'"
+            BUILD_INSTAGRAM="true"
           fi
 
           BUILD_FILTER=""
           [ "$BUILD_MORPHE" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}morphe"
-          [ "$BUILD_PIKO" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}piko"
+          [ "$BUILD_X" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}x-piko"
+          [ "$BUILD_INSTAGRAM" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}instagram-piko"
 
           if [ -n "$BUILD_FILTER" ]; then
             echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT

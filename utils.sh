@@ -924,6 +924,13 @@ build_rv() {
                 return 0
         fi
         log "${table}: ${version}"
+        if [ "${args[patcher_args]}" ]; then p_patcher_args+=("${args[patcher_args]}"); fi
+
+        local branding_patch
+        branding_patch=$(grep "^Name: " <<<"$list_patches" | grep -i "custom branding" || :) branding_patch=${branding_patch#*: }
+        if [[ ${p_patcher_args[*]} =~ $branding_patch ]]; then
+                branding_patch=""
+        fi
 
         local microg_patch disable_psu_patch
         microg_patch=$(grep "^Name: " <<<"$list_patches" | grep -i "gmscore\|microg" || :) microg_patch=${microg_patch#*: }
@@ -940,7 +947,6 @@ build_rv() {
         local patcher_args patched_apk build_mode
         local rv_brand_f=${args[rv_brand],,}
         rv_brand_f=${rv_brand_f// /-}
-        if [ "${args[patcher_args]}" ]; then p_patcher_args+=("${args[patcher_args]}"); fi
 
         local build_success=false
         for build_mode in "${build_mode_arr[@]}"; do
@@ -960,6 +966,9 @@ build_rv() {
                 fi
                 if [ -n "$disable_psu_patch" ]; then
                         patcher_args+=("-e \"${disable_psu_patch}\"")
+                fi
+                if [ -n "$branding_patch" ] && [ "$build_mode" = module ]; then
+                        patcher_args+=("-d \"${branding_patch}\"")
                 fi
 
                 if [ "$riplib" = true ] && [ "${args[cli_supports_striplibs]}" = true ] && [ "$build_mode" = "apk" ]; then
