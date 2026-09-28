@@ -8,20 +8,22 @@
 ![Reddit](https://img.shields.io/endpoint?style=flat-square&logo=reddit&logoColor=%23FF4500&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Freddit-morphe-badge.json)
 ![X](https://img.shields.io/endpoint?style=flat-square&logo=x&logoColor=%23000000&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fx-piko-badge.json)
 ![Instagram](https://img.shields.io/endpoint?style=flat-square&logo=instagram&logoColor=%23E4405F&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Finstagram-piko-badge.json)
+![Messenger](https://img.shields.io/endpoint?style=flat-square&logo=messenger&logoColor=%2300B2FF&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fmessenger-hush-badge.json)
+![Facebook](https://img.shields.io/endpoint?style=flat-square&logo=facebook&logoColor=%230187F2&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Ffacebook-hush-badge.json)
+![Google Photos](https://img.shields.io/endpoint?style=flat-square&logo=googlephotos&logoColor=%23F4B400&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fgoogle-photos-morphe-badge.json)
 
 </div>
 
-Automated builder for Morphe and Piko patched apps with Obtainium support.  
-Fork of [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module), focused on Morphe/Piko patches and arm64-only builds.
+Automated builder for Morphe, Piko and Hush patched apps with Obtainium support.  
+Fork of [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module), focused on Morphe/Piko/Hush patches and arm64-only builds.
 
 ## What's different
 
-- **Morphe + Piko patches** instead of ReVanced
-- **Per-app releases**: each app gets its own GitHub release tag, easy to roll back
+- **Morphe, Piko and Hush patches** instead of ReVanced
+- **Per-app releases**: each app gets its own release tag, easy to roll back
 - **Auto-fallback**: if the latest app version fails to patch, tries older versions automatically
 - **Smaller APKs**: arm64 only, strips other libs
-- **KSU/APatch support**: proper `nsenter` mount on boot, not just Magisk
-- **Better mounting**: `nosuid,nodev` bind mounts, susfs auto-hide, idempotent re-mount on boot, cleaner path under `/data/adb/Morphe-Module`
+- **Root support**: Magisk/KernelSU/APatch. Proper `nsenter` mounts with `nosuid,nodev`, susfs auto-hide, and optional **NoMount** VFS injection (KSU/APatch, chosen at install)
 - **curl-impersonate**: bypasses anti-bot checks on APKMirror/Uptodown
 
 ## Apps Built
@@ -33,22 +35,24 @@ Fork of [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-mo
 | <img src="docs/reddit.png" width="30" height="30"> **Reddit** | Morphe | APK | [![Add][badge]][obt] |
 | <img src="docs/x.png" width="30" height="30"> **X (Twitter)** | Piko | APK | [![Add][badge]][obt] |
 | <img src="docs/instagram.png" width="30" height="30"> **Instagram** | Piko | APK | [![Add][badge]][obt] |
+| <img src="docs/messenger.png" width="30" height="30"> **Messenger** | Hush | APK | [![Add][badge]][obt] |
+| <img src="docs/facebook.png" width="30" height="30"> **Facebook** | Hush | APK | [![Add][badge]][obt] |
+| <img src="docs/google-photos.png" width="30" height="30"> **Google Photos** | Morphe | APK + Module | [![Add][badge]][obt] |
 
 [badge]: https://img.shields.io/badge/Add-Add?style=flat-square&logo=Obtainium&logoColor=%23ffffff&logoSize=auto&color=%237028E7
 [obt]: https://drsexo.github.io/Morphe-Obtainium/Obtainium.html
 
 ## Build Schedule
 
-Builds run **daily at midnight UTC**, triggered only when new stable patches are released.  
-Tries the latest app version first; if patching fails, falls back to older versions.
+Builds run **daily at midnight UTC**, triggered only when new stable patches are released.
 
 ## Manual Installation
 
 ### Root (Magisk/KernelSU/APatch Module)
 1. Download and install the Magisk module (`.zip`) from [Releases](../../releases)
 2. Reboot
-3. (Recommended) Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach the app from Play Store updates
+3. (Recommended) Use [zygisk-detach](https://github.com/j-hc/zygisk-detach) to detach Google apps from Play Store updates
 
 ### Non-root (APK)
 1. Download and install the APK from [Releases](../../releases)
-2. Install [MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases) for Google login functionality
+2. For Google apps (YouTube, Music, Google Photos), install [MicroG-RE](https://github.com/MorpheApp/MicroG-RE/releases) for login
