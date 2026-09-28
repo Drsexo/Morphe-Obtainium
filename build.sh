@@ -189,21 +189,15 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 
         brand_lower="${brand,,}"
         cli_name=""
-        patches_changelog=""
         cli_changelog=""
-        if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]]; then
+        if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]] || [[ "$brand_lower" == *"hush"* ]]; then
                 cli_name="Morphe CLI"
-                if [[ "$brand_lower" == *"piko"* ]]; then
-                        patches_changelog="[Patches](https://github.com/crimera/piko/releases)"
-                else
-                        patches_changelog="[Patches](https://github.com/MorpheApp/morphe-patches/releases)"
-                fi
                 cli_changelog="[CLI](https://github.com/MorpheApp/morphe-desktop/releases)"
         else
                 cli_name="ReVanced CLI"
-                patches_changelog="[Patches](https://github.com/ReVanced/revanced-patches/releases)"
                 cli_changelog="[CLI](https://github.com/inotia00/revanced-cli/releases)"
         fi
+        patches_changelog="[Patches](https://github.com/${patches_src}/releases)"
 
         cli_ver_display=""
         for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/morphe-desktop-*.jar "$TEMP_DIR"/*/revanced-cli-*.jar; do
@@ -221,11 +215,14 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
                 "reddit") app_icon="${raw_base}/reddit.png" ;;
                 "x") app_icon="${raw_base}/x.png" ;;
                 "instagram") app_icon="${raw_base}/instagram.png" ;;
+                "messenger") app_icon="${raw_base}/messenger.png" ;;
+                "facebook") app_icon="${raw_base}/facebook.png" ;;
+                "google photos") app_icon="${raw_base}/google-photos.png" ;;
         esac
 
         needs_microg=false
         app_name_lower="${app_name,,}"
-        if [[ "$app_name_lower" == "youtube" ]] || [[ "$app_name_lower" == "youtube music" ]]; then
+        if [[ "$app_name_lower" == "youtube" ]] || [[ "$app_name_lower" == "youtube music" ]] || [[ "$app_name_lower" == "google photos" ]]; then
                 needs_microg=true
         fi
 

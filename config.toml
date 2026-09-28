@@ -54,3 +54,38 @@ direct-dlurl = "https://github.com/krvstek/uni-storage/releases/download/instagr
 version = "439.0.0.37.89"
 patches-source = "crimera/piko"
 patches-version = "dev"
+
+[Facebook-Hush]
+app-name = "Facebook"
+brand = "Hush"
+pkg-name = "com.facebook.katana"
+build-mode = "apk"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/facebook-2/facebook/"
+uptodown-dlurl = "https://facebook.en.uptodown.com/android"
+dpi = "240-640dpi"
+version = "auto"
+patches-source = "SysAdminDoc/Hushfacebook"
+patches-version = "latest"
+
+[Messenger-Hush]
+app-name = "Messenger"
+brand = "Hush"
+pkg-name = "com.facebook.orca"
+build-mode = "apk"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/facebook-2/messenger/"
+uptodown-dlurl = "https://facebook-messenger.en.uptodown.com/android"
+version = "auto"
+patches-source = "SysAdminDoc/HushMessenger"
+patches-version = "latest"
+
+[Google-Photos-Morphe]
+app-name = "Google Photos"
+brand = "Morphe"
+pkg-name = "com.google.android.apps.photos"
+build-mode = "both"
+apkmirror-dlurl = "https://www.apkmirror.com/apk/google-inc/photos/"
+uptodown-dlurl = "https://google-photos.en.uptodown.com/android"
+version = "auto"
+patches-source = "Akash-Sriram/morphe-google-photos"
+patches-version = "latest"
+excluded-patches = "'Custom Morphe branding'"

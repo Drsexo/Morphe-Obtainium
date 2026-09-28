@@ -22,6 +22,18 @@ on:
         description: "Instagram"
         type: boolean
         default: true
+      build_messenger:
+        description: "Messenger"
+        type: boolean
+        default: true
+      build_facebook:
+        description: "Facebook"
+        type: boolean
+        default: true
+      build_google_photos:
+        description: "Google Photos"
+        type: boolean
+        default: true
   schedule:
     - cron: "0 0 * * *"
 
@@ -53,6 +65,9 @@ jobs:
           BUILD_REDDIT: ${{ github.event.inputs.build_reddit }}
           BUILD_X: ${{ github.event.inputs.build_x }}
           BUILD_INSTAGRAM: ${{ github.event.inputs.build_instagram }}
+          BUILD_MESSENGER: ${{ github.event.inputs.build_messenger }}
+          BUILD_FACEBOOK: ${{ github.event.inputs.build_facebook }}
+          BUILD_GOOGLE_PHOTOS: ${{ github.event.inputs.build_google_photos }}
         run: |
           if [ "$IS_MANUAL" = "true" ]; then
             FILTER=""
@@ -61,6 +76,9 @@ jobs:
             [ "$BUILD_REDDIT" = "true" ] && FILTER="${FILTER:+$FILTER,}Reddit-Morphe"
             [ "$BUILD_X" = "true" ] && FILTER="${FILTER:+$FILTER,}X-Piko"
             [ "$BUILD_INSTAGRAM" = "true" ] && FILTER="${FILTER:+$FILTER,}Instagram-Piko"
+            [ "$BUILD_MESSENGER" = "true" ] && FILTER="${FILTER:+$FILTER,}Messenger-Hush"
+            [ "$BUILD_FACEBOOK" = "true" ] && FILTER="${FILTER:+$FILTER,}Facebook-Hush"
+            [ "$BUILD_GOOGLE_PHOTOS" = "true" ] && FILTER="${FILTER:+$FILTER,}Google-Photos-Morphe"
             echo "Manual trigger - build filter: ${FILTER:-none selected}"
             if [ -n "$FILTER" ]; then
               echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
@@ -103,6 +121,9 @@ jobs:
           BUILD_MORPHE="false"
           BUILD_X="false"
           BUILD_INSTAGRAM="false"
+          BUILD_MESSENGER="false"
+          BUILD_FACEBOOK="false"
+          BUILD_GOOGLE_PHOTOS="false"
 
           MORPHE_PATCHES_VER=$(get_patches_version "YouTube-Morphe")
           MORPHE_LAST_VER=$(get_last_patches_ver "morphe-patches")
@@ -140,10 +161,49 @@ jobs:
             BUILD_INSTAGRAM="true"
           fi
 
+          MESSENGER_PATCHES_VER=$(get_patches_version "Messenger-Hush")
+          MESSENGER_LAST_VER=$(get_last_patches_ver "hushmessenger")
+          if [ "$MESSENGER_PATCHES_VER" = "dev" ]; then
+            MESSENGER_LATEST=$(get_latest_upstream_ver "SysAdminDoc/HushMessenger" "true")
+          else
+            MESSENGER_LATEST=$(get_latest_upstream_ver "SysAdminDoc/HushMessenger" "false")
+          fi
+          if [ -z "$MESSENGER_LAST_VER" ] || [ "$MESSENGER_LAST_VER" != "$MESSENGER_LATEST" ]; then
+            echo "Messenger patches (HushMessenger): '${MESSENGER_LAST_VER:-none}' -> '${MESSENGER_LATEST}'"
+            BUILD_MESSENGER="true"
+          fi
+
+          FACEBOOK_PATCHES_VER=$(get_patches_version "Facebook-Hush")
+          FACEBOOK_LAST_VER=$(get_last_patches_ver "hushfacebook")
+          if [ "$FACEBOOK_PATCHES_VER" = "dev" ]; then
+            FACEBOOK_LATEST=$(get_latest_upstream_ver "SysAdminDoc/Hushfacebook" "true")
+          else
+            FACEBOOK_LATEST=$(get_latest_upstream_ver "SysAdminDoc/Hushfacebook" "false")
+          fi
+          if [ -z "$FACEBOOK_LAST_VER" ] || [ "$FACEBOOK_LAST_VER" != "$FACEBOOK_LATEST" ]; then
+            echo "Facebook patches (Hushfacebook): '${FACEBOOK_LAST_VER:-none}' -> '${FACEBOOK_LATEST}'"
+            BUILD_FACEBOOK="true"
+          fi
+
+          GOOGLE_PHOTOS_PATCHES_VER=$(get_patches_version "Google-Photos-Morphe")
+          GOOGLE_PHOTOS_LAST_VER=$(get_last_patches_ver "morphe-google-photos")
+          if [ "$GOOGLE_PHOTOS_PATCHES_VER" = "dev" ]; then
+            GOOGLE_PHOTOS_LATEST=$(get_latest_upstream_ver "Akash-Sriram/morphe-google-photos" "true")
+          else
+            GOOGLE_PHOTOS_LATEST=$(get_latest_upstream_ver "Akash-Sriram/morphe-google-photos" "false")
+          fi
+          if [ -z "$GOOGLE_PHOTOS_LAST_VER" ] || [ "$GOOGLE_PHOTOS_LAST_VER" != "$GOOGLE_PHOTOS_LATEST" ]; then
+            echo "Google Photos patches (morphe-google-photos): '${GOOGLE_PHOTOS_LAST_VER:-none}' -> '${GOOGLE_PHOTOS_LATEST}'"
+            BUILD_GOOGLE_PHOTOS="true"
+          fi
+
           BUILD_FILTER=""
-          [ "$BUILD_MORPHE" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}morphe"
+          [ "$BUILD_MORPHE" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}youtube-morphe,youtube-music-morphe,reddit-morphe"
           [ "$BUILD_X" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}x-piko"
           [ "$BUILD_INSTAGRAM" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}instagram-piko"
+          [ "$BUILD_MESSENGER" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}messenger-hush"
+          [ "$BUILD_FACEBOOK" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}facebook-hush"
+          [ "$BUILD_GOOGLE_PHOTOS" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}google-photos-morphe"
 
           if [ -n "$BUILD_FILTER" ]; then
             echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
@@ -398,21 +458,15 @@ jobs:
             patches_display="${patches_ver}"
             brand_lower="${brand,,}"
             cli_name=""
-            patches_link=""
             cli_link=""
-            if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]]; then
+            if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]] || [[ "$brand_lower" == *"hush"* ]]; then
               cli_name="Morphe CLI"
-              if [[ "$brand_lower" == *"piko"* ]]; then
-                patches_link='<a href="https://github.com/crimera/piko/releases">Patches</a>'
-              else
-                patches_link='<a href="https://github.com/MorpheApp/morphe-patches/releases">Patches</a>'
-              fi
               cli_link='<a href="https://github.com/MorpheApp/morphe-desktop/releases">CLI</a>'
             else
               cli_name="ReVanced CLI"
-              patches_link='<a href="https://github.com/ReVanced/revanced-patches/releases">Patches</a>'
               cli_link='<a href="https://github.com/inotia00/revanced-cli/releases">CLI</a>'
             fi
+            patches_link="<a href=\"https://github.com/${patches_src}/releases\">Patches</a>"
 
             cli_ver_display=""
             for cli_file in temp/*/morphe-cli-*.jar temp/*/morphe-desktop-*.jar temp/*/revanced-cli-*.jar; do
