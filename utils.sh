@@ -521,6 +521,15 @@ merge_splits() {
                 zip -d "${bundle}" $remove_arch 2>/dev/null || true
         fi
 
+        if [[ "${output##*/}" == com.facebook.katana-* ]]; then
+                local ad_splits
+                ad_splits=$(unzip -l "${bundle}" 2>/dev/null | grep -oP '[^ ]*helium[^ ]*\.apk') || true
+                if [ -n "$ad_splits" ]; then
+                        pr "Removing $(echo "$ad_splits" | wc -l) Helium ad engine splits: $(echo "$ad_splits" | tr '\n' ' ')"
+                        zip -d "${bundle}" $ad_splits 2>/dev/null || true
+                fi
+        fi
+
         local dpi_splits
         dpi_splits=$(unzip -l "${bundle}" 2>/dev/null \
                 | grep -oP '[^ ]*(?:split_)?config[._][a-z]*dpi\.apk') || true
