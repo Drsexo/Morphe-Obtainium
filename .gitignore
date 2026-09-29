@@ -3,3 +3,4 @@
 build.md
 cmpr
 *-temporary-files
+/bin/creq

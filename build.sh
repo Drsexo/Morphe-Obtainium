@@ -157,6 +157,11 @@ for table_name in $(toml_get_table_names); do
 
         app_args[pkg_name]=$(toml_get "$t" pkg-name) || app_args[pkg_name]=""
         app_args[dpi]=$(toml_get "$t" dpi) || app_args[dpi]=""
+        app_args[apkmirror_type]=$(toml_get "$t" apkmirror-type) && {
+                if ! isoneof "${app_args[apkmirror_type]}" apk bundle; then
+                        abort "ERROR: apkmirror-type '${app_args[apkmirror_type]}' is not a valid option for '${table_name}': only 'apk' or 'bundle' is allowed"
+                fi
+        } || app_args[apkmirror_type]="bundle"
         table_name_f=${table_name,,}
         table_name_f=${table_name_f// /-}
         app_args[module_prop_name]=$(toml_get "$t" module-prop-name) || app_args[module_prop_name]="${table_name_f}"
@@ -277,7 +282,8 @@ fi
                         version=$(grep "^${app_name}|" "$TEMP_DIR/build_success.log" | head -1 | cut -d'|' -f2)
                         echo "${app_name} \`${version}\` ✅  "
                 elif grep -q "^${app_name}|" "$TEMP_DIR/build_failed.log" 2>/dev/null; then
-                        echo "${app_name} — ❌  "
+                        reason=$(grep "^${app_name}|" "$TEMP_DIR/build_failed.log" | head -1 | cut -d'|' -f3)
+                        echo "${app_name} — ❌ ${reason:-failed}  "
                 fi
         done < "$TEMP_DIR/app_order.log"
         echo ""

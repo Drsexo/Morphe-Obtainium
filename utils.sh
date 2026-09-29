@@ -180,86 +180,137 @@ set_prebuilts() {
         arch=$(uname -m)
         if [ "$arch" = aarch64 ]; then arch=arm64; elif [ "${arch:0:5}" = "armv7" ]; then arch=arm; fi
         HTMLQ="${BIN_DIR}/htmlq"
-
-        CURL_IMP="${BIN_DIR}/curl-imp"
-        if [ ! -x "$CURL_IMP" ] || ! grep -q '^imp_targets = \[' "$CURL_IMP" 2>/dev/null; then
-                if pip install curl-cffi --break-system-packages -q 2>/dev/null; then
-                        FF_VER=$(curl -sf "https://product-details.mozilla.org/1.0/firefox_versions.json" | jq -re '.LATEST_FIREFOX_VERSION' 2>/dev/null || echo "135.0")
-                        FF_MAJOR=${FF_VER%%.*}
-                        cat > "$CURL_IMP" << PYEOF
+        CREQ="${BIN_DIR}/creq"
+        if [ ! -x "$CREQ" ] || ! grep -q "impersonate='chrome150'" "$CREQ" 2>/dev/null; then
+                python3 -c 'import curl_cffi' 2>/dev/null || pip install curl_cffi --quiet --break-system-packages
+                cat > "$CREQ" <<'PYEOF'
 #!/usr/bin/env python3
+import os
+import pickle
 import sys
+import time
 from curl_cffi import requests
 
-TAKES_VALUE = {
-    '-H', '--header', '-A', '--user-agent', '-o', '--output',
-    '-c', '--cookie-jar', '-b', '--cookie',
-    '--connect-timeout', '--max-time', '--retry', '--retry-delay',
-}
-FLAGS = {'-L', '--location', '-s', '--silent', '-S', '--show-error',
-         '--fail', '-f', '-v', '--verbose', '-k', '--insecure'}
+TAKES_VALUE = {'-H', '--header', '-A', '--user-agent', '-o', '--output', '-c', '--cookie-jar',
+               '-b', '--cookie', '--connect-timeout', '--max-time', '--retry', '--retry-delay'}
 
+headers = {}
+output = '-'
+jar = None
+url = None
+ct = 30.0
 args = sys.argv[1:]
-headers, output, url = {}, '-', None
-connect_timeout = 30
-
 i = 0
 while i < len(args):
-    a = args[i]
-    if a in TAKES_VALUE and i + 1 < len(args):
-        val = args[i + 1]
-        if a in ('-H', '--header') and ': ' in val:
-            k, v = val.split(': ', 1)
-            if k.lower() != 'user-agent':
-                headers[k] = v
-        elif a in ('-o', '--output'):
-            output = val
-        elif a == '--connect-timeout':
-            try: connect_timeout = float(val)
-            except ValueError: pass
-        i += 2
-    elif a in FLAGS:
-        i += 1
-    elif not a.startswith('-'):
-        url = a; i += 1
-    else:
-        i += 1
+        a = args[i]
+        if a in TAKES_VALUE and i + 1 < len(args):
+                v = args[i + 1]
+                if a in ('-H', '--header') and ': ' in v:
+                        k, vv = v.split(': ', 1)
+                        if k.lower() != 'user-agent':
+                                headers[k] = vv
+                elif a in ('-o', '--output'):
+                        output = v
+                elif a in ('-c', '--cookie-jar', '-b', '--cookie'):
+                        jar = v
+                elif a == '--connect-timeout':
+                        try:
+                                ct = float(v)
+                        except ValueError:
+                                pass
+                i += 2
+        elif not a.startswith('-') and url is None:
+                url = a
+                i += 1
+        else:
+                i += 1
 
-if not url:
-    print("curl-imp: no URL specified", file=sys.stderr); sys.exit(1)
+if url is None:
+        print('creq: no URL specified', file=sys.stderr)
+        sys.exit(1)
 
-timeout = (connect_timeout, 300)
+solver = os.environ.get('CF_SOLVER_URL', 'http://127.0.0.1:8000')
 
-imp_targets = ["firefox${FF_MAJOR}", "firefox135", "firefox120", "firefox110", "firefox"]
+s = requests.Session(impersonate='chrome150')
+if jar:
+        try:
+                with open(jar, 'rb') as f:
+                        for c in pickle.load(f):
+                                s.cookies.set(c['name'], c['value'], domain=c['domain'], path=c['path'])
+        except Exception:
+                pass
+
+def challenge(r):
+        if r.status_code == 403:
+                return True
+        if r.status_code != 503:
+                return False
+        if r.headers.get('cf-mitigated') is not None:
+                return True
+        head = r.content[:8192] if output == '-' else next(r.iter_content(8192), b'')
+        h = head.lower()
+        return b'just a moment' in h or b'turnstile' in h
+
+def solve():
+        global s
+        try:
+                r = requests.get(solver + '/cookies', params={'url': url}, timeout=(3, 120))
+                if r.status_code != 200:
+                        return False
+                d = r.json()
+                ck = d.get('cookies') or {}
+                if isinstance(ck, dict):
+                        pairs = ck.items()
+                else:
+                        pairs = [(c.get('name'), c.get('value')) for c in ck]
+                s = requests.Session(impersonate='chrome150')
+                for k, v in pairs:
+                        if k and v:
+                                s.cookies.set(k, v)
+                if d.get('user_agent'):
+                        s.headers['User-Agent'] = d['user_agent']
+                return True
+        except Exception:
+                return False
+
 r = None
-last_err = None
-for target in imp_targets:
-    try:
-        r = requests.get(url, headers=headers, impersonate=target,
-                         allow_redirects=True, timeout=timeout)
+for attempt in (1, 2, 3):
+        try:
+                r = s.get(url, headers=headers, allow_redirects=True, timeout=(ct, 300), stream=output != '-')
+        except Exception as e:
+                if attempt < 3:
+                        time.sleep(2 * attempt)
+                        continue
+                print(f'curl: (6) {e}', file=sys.stderr)
+                sys.exit(6)
+        if challenge(r):
+                if attempt < 3 and solve():
+                        print('creq: cf clearance obtained', file=sys.stderr)
+                        time.sleep(2 * attempt)
+                        continue
+                print(f'curl: (22) The requested URL returned error: {r.status_code}', file=sys.stderr)
+                sys.exit(22)
+        if r.status_code >= 400:
+                print(f'curl: (22) The requested URL returned error: {r.status_code}', file=sys.stderr)
+                sys.exit(22)
         break
-    except Exception as e:
-        last_err = e
-        continue
 
-if r is None:
-    print(f"curl: (6) {last_err}", file=sys.stderr); sys.exit(6)
+if jar:
+        try:
+                with open(jar, 'wb') as f:
+                        pickle.dump([{'name': c.name, 'value': c.value, 'domain': c.domain, 'path': c.path}
+                                 for c in s.cookies.jar], f)
+        except Exception:
+                pass
 
-if r.status_code >= 400:
-    print(f"curl: (22) The requested URL returned error: {r.status_code}", file=sys.stderr)
-    sys.exit(22)
-
-data = r.content
 if output == '-':
-    sys.stdout.buffer.write(data)
+        sys.stdout.buffer.write(r.content)
 else:
-    with open(output, 'wb') as f: f.write(data)
+        with open(output, 'wb') as f:
+                for chunk in r.iter_content(1048576):
+                        f.write(chunk)
 PYEOF
-                        chmod +x "$CURL_IMP"
-                else
-                        pr "Warning: curl-cffi unavailable, falling back to system curl"
-                        CURL_IMP=""
-                fi
+                chmod +x "$CREQ"
         fi
 }
 
@@ -295,9 +346,7 @@ _req() {
                         return 0
                 fi
         fi
-        local _curl="${CURL_IMP:-}"
-        [ -x "$_curl" ] || _curl="curl"
-        if ! "$_curl" -L -c "$TEMP_DIR/cookie.txt" -b "$TEMP_DIR/cookie.txt" --connect-timeout 10 --retry 1 --fail -s -S "$@" "$ip" -o "$dlp"; then
+        if ! "$CREQ" -L -c "$TEMP_DIR/cookie.txt" -b "$TEMP_DIR/cookie.txt" --connect-timeout 10 --retry 1 --fail -s -S "$@" "$ip" -o "$dlp"; then
                 epr "Request failed: $ip"
                 if [ "$dlp" != - ]; then rm -f "$dlp"; fi
                 return 1
@@ -534,8 +583,8 @@ merge_splits() {
 }
 
 apkmirror_search() {
-        local resp="$1" dpi="$2" arch="$3" apk_bundle="$4"
-        local dlurl="" node app_table emptyCheck
+        local resp="$1" dpi="$2" arch="$3" apk_bundle="$4" vcode="${5:-}"
+        local dlurl="" node app_table emptyCheck fallback_url="" anyfallback_url=""
 
         local apparch=('universal' 'noarch' 'arm64-v8a + armeabi-v7a')
         if [ "$arch" != "all" ]; then
@@ -547,7 +596,6 @@ apkmirror_search() {
                 appdpi+=($dpi)
         fi
 
-        local fallback_url=""
         for ((n = 1; n < 40; n++)); do
                 node=$($HTMLQ "div.table-row.headerFont:nth-last-child($n)" <<<"$resp")
                 if [ -z "$node" ]; then break; fi
@@ -563,16 +611,38 @@ apkmirror_search() {
 
                 if [ "$node_apk_bundle" != "$apk_bundle" ]; then continue; fi
 
-                if isoneof "$node_arch" "${apparch[@]}"; then
-                        if isoneof "$node_dpi" "${appdpi[@]}"; then
+                if [ -n "$vcode" ]; then
+                        local node_vcode
+                        node_vcode=$($HTMLQ "div.table-cell:nth-child(1) > span.colorLightBlack:not(.wrapText)" --text <<<"$node" | xargs)
+                        if [ "$node_vcode" = "$vcode" ]; then
+                                pr "apkmirror_search: exact version-code match ${vcode} ${node_arch} ${node_dpi} (${dlurl##*/})" >&2
                                 echo "$dlurl"
                                 return 0
                         fi
-                        [ -z "$fallback_url" ] && fallback_url=$dlurl
+                fi
+
+                if isoneof "$node_arch" "${apparch[@]}"; then
+                        if isoneof "$node_dpi" "${appdpi[@]}"; then
+                                if [ -z "$vcode" ]; then
+                                        pr "apkmirror_search: picked ${apk_bundle} ${node_arch} ${node_dpi} (${dlurl##*/})" >&2
+                                        echo "$dlurl"
+                                        return 0
+                                fi
+                                [ -z "$fallback_url" ] && fallback_url=$dlurl
+                        fi
+                        [ -z "$anyfallback_url" ] && [ -z "$dpi" ] && anyfallback_url=$dlurl
                 fi
         done
         if [ -n "$fallback_url" ]; then
+                [ -n "$vcode" ] && wpr "apkmirror_search: version code ${vcode} not found on the page, falling back to variant matching" >&2
+                pr "apkmirror_search: no ${apk_bundle} ${arch} ${dpi:-nodpi} row, falling back to ${fallback_url##*/}" >&2
                 echo "$fallback_url"
+                return 0
+        fi
+        if [ -n "$anyfallback_url" ]; then
+                [ -n "$vcode" ] && wpr "apkmirror_search: version code ${vcode} not found on the page, falling back to variant matching" >&2
+                pr "apkmirror_search: no ${apk_bundle} ${arch} ${dpi:-nodpi} row, falling back to ${anyfallback_url##*/}" >&2
+                echo "$anyfallback_url"
                 return 0
         fi
         if [ "$n" -eq 2 ] && [ "$dlurl" ]; then
@@ -582,9 +652,9 @@ apkmirror_search() {
         return 1
 }
 dl_apkmirror() {
-        local url=$1 version=${2// /-} output=$3 arch=$4 dpi=$5 is_bundle=false
+        local url=$1 version=${2// /-} output=$3 arch=$4 dpi=$5 vcode=${6:-} is_bundle=false
         if [ -f "${output}.apkm" ]; then
-                merge_splits "${output}.apkm" "${output}" "${arch}"
+                merge_splits "${output}.apkm" "${output}" "${arch}" || return 1
                 return 0
         fi
         local resp node app_table apkmname dlurl=""
@@ -597,15 +667,23 @@ dl_apkmirror() {
         resp=$(req "$url" -) || return 1
         node=$($HTMLQ "div.table-row.headerFont:nth-last-child(1)" -r "span:nth-child(n+3)" <<<"$resp")
         if [ "$node" ]; then
-                for type in BUNDLE APK; do
-                        if dlurl=$(apkmirror_search "$resp" "$dpi" "$arch" "$type"); then
+                local am_types="BUNDLE APK"
+                case "${args[apkmirror_type]:-}" in
+                        apk) am_types="APK" ;;
+                        bundle) am_types="BUNDLE" ;;
+                esac
+                for type in $am_types; do
+                        if dlurl=$(apkmirror_search "$resp" "$dpi" "$arch" "$type" "$vcode"); then
                                 if [ "$type" = "BUNDLE" ]; then
                                         is_bundle=true
                                 else is_bundle=false; fi
                                 break
                         fi
                 done
-                if [ -z "$dlurl" ]; then return 1; fi
+                if [ -z "$dlurl" ]; then
+                        epr "APKMirror: no matching variant for '${version}' (arch=${arch}, dpi=${dpi:-any}, type=${am_types// /|})"
+                        return 1
+                fi
                 resp=$(req "$dlurl" -)
         fi
         url=$(echo "$resp" | $HTMLQ --base https://www.apkmirror.com --attributes href "a.btn") || return 1
@@ -614,9 +692,11 @@ dl_apkmirror() {
         [ -z "$url" ] && { epr "Could not extract direct download URL from APKMirror"; return 1; }
         if [ "$is_bundle" = true ]; then
                 req "$url" "${output}.apkm" || return 1
+                pr "APKMirror: downloaded bundle $(basename "$output").apkm ($(stat -c%s "${output}.apkm" 2>/dev/null || echo 0) bytes)"
                 merge_splits "${output}.apkm" "${output}" "${arch}"
         else
                 req "$url" "${output}" || return 1
+                pr "APKMirror: downloaded apk $(basename "$output") ($(stat -c%s "${output}" 2>/dev/null || echo 0) bytes)"
         fi
 }
 get_apkmirror_vers() {
@@ -769,7 +849,7 @@ prep_patch_input() {
 }
 
 dl_stock_apk() {
-        local stock_apk=$1 version=$2 arch=$3 dpi=$4 table=$5
+        local stock_apk=$1 version=$2 arch=$3 dpi=$4 table=$5 vcode=${6:-}
         shift 5
 
         if [ -f "$stock_apk" ]; then return 0; fi
@@ -784,7 +864,7 @@ dl_stock_apk() {
                                 continue
                         fi
                 fi
-                if dl_${dl_p} "${args[${dl_p}_dlurl]}" "$version" "$stock_apk" "$arch" "$dpi"; then
+                if dl_${dl_p} "${args[${dl_p}_dlurl]}" "$version" "$stock_apk" "$arch" "$dpi" "$vcode"; then
                         return 0
                 fi
                 epr "Could not download '${table}' from '${dl_p}' with version '${version}', arch '${arch}'"
@@ -808,6 +888,19 @@ extract_cli_version() {
 
 extract_patches_version() {
         basename "$1" | sed -E 's/.*patches-//; s/\.[^.]+$//'
+}
+
+get_patch_version_code() {
+        local list_patches=$1 version=$2
+        local vesc=${version//./\\.}
+        local codes
+        codes=$(grep -oP "^[[:space:]]*${vesc}:[[:space:]]*ARM64_V8A=\K[0-9]+" <<<"$list_patches" | sort -u)
+        if [ -z "$codes" ]; then return 1; fi
+        if [ "$(wc -l <<<"$codes")" -gt 1 ]; then
+                wpr "Patches declare conflicting ARM64_V8A codes for '${version}', not pinning: $(echo "$codes" | tr '\n' ' ')"
+                return 1
+        fi
+        echo "$codes"
 }
 
 build_rv() {
@@ -888,6 +981,12 @@ build_rv() {
                 return 0
         fi
 
+        local version_code=""
+        if isoneof "$version_mode" "auto" "experimental"; then
+                version_code=$(get_patch_version_code "$list_patches" "$version") || version_code=""
+        fi
+        [ -n "$version_code" ] && pr "Patch-validated version code for '${table}': ${version_code}"
+
         if [ "$mode_arg" = module ]; then
                 build_mode_arr=(module)
         elif [ "$mode_arg" = apk ]; then
@@ -903,7 +1002,7 @@ build_rv() {
 
         local dl_attempt=0 dl_max_attempts=3 dl_ok=false
         while [ "$dl_attempt" -lt "$dl_max_attempts" ]; do
-                if dl_stock_apk "$stock_apk" "$version" "$arch" "${args[dpi]}" "$table"; then
+                if dl_stock_apk "$stock_apk" "$version" "$arch" "${args[dpi]}" "$table" "$version_code"; then
                         dl_ok=true
                         break
                 fi
@@ -1012,7 +1111,7 @@ build_rv() {
                                                                 fb_patched="${TEMP_DIR}/${app_name_l}-${rv_brand_f}-${fb_version_f}-${arch_f}.apk"
                                                         fi
 
-                                                        if ! dl_stock_apk "$fb_stock" "$fallback_ver" "$arch" "${args[dpi]}" "$table"; then
+                                                        if ! dl_stock_apk "$fb_stock" "$fallback_ver" "$arch" "${args[dpi]}" "$table" ""; then
                                                                 epr "Could not download v${fallback_ver}, skipping"
                                                                 continue
                                                         fi

@@ -24,7 +24,6 @@ Fork of [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-mo
 - **Auto-fallback**: if the latest app version fails to patch, tries older versions automatically
 - **Smaller APKs**: arm64 only, strips other libs
 - **Root support**: Magisk/KernelSU/APatch. Proper `nsenter` mounts with `nosuid,nodev`, susfs auto-hide, and optional **NoMount** VFS injection (KSU/APatch, chosen at install)
-- **curl-impersonate**: bypasses anti-bot checks on APKMirror/Uptodown
 
 ## Apps Built
 

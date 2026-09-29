@@ -242,6 +242,9 @@ jobs:
           echo "DATE=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
           echo "NEXT_VER_CODE=$(date -u +%Y%m%d)" >> $GITHUB_OUTPUT
 
+      - name: Start CF solver
+        run: docker run -d -p 8000:8000 ghcr.io/sarperavci/cloudflarebypassforscraping:latest
+
       - name: Build modules/APKs
         run: |
           chmod +x build.sh bin/htmlq
