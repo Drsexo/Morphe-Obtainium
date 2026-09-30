@@ -303,16 +303,13 @@ jobs:
               fi
             done
             if gh release view "$release_tag" &>/dev/null; then
-              echo "  Updating existing release"
-              gh release edit "$release_tag" \
-                --title "${release_title}" \
-                --notes "${release_body}"
-            else
-              echo "  Creating new release"
-              gh release create "$release_tag" \
-                --title "${release_title}" \
-                --notes "${release_body}"
+              echo "  Recreating release for a fresh publish date"
+              gh release delete "$release_tag" --yes --cleanup-tag 2>/dev/null || true
             fi
+            echo "  Creating new release"
+            gh release create "$release_tag" \
+              --title "${release_title}" \
+              --notes "${release_body}"
             for f in "${matching_files[@]}"; do
               echo "  Uploading: $(basename "$f")"
               gh release upload "$release_tag" "$f" --clobber
