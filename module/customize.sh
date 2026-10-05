@@ -123,22 +123,24 @@ if ! OP=$(dumpsys package "$PKG_NAME") || [ -z "$OP" ]; then
         if pmex install-existing "$PKG_NAME" >/dev/null 2>&1; then
                 pmex uninstall-system-updates "$PKG_NAME" >/dev/null 2>&1
         fi
+else
+        PKG_FLAGS=$(echo "$OP" | grep -m1 pkgFlags)
+        if echo "$PKG_FLAGS" | grep -Fq ' SYSTEM '; then
+                IS_SYSTEM_APP=true
+                if echo "$PKG_FLAGS" | grep -Fq ' UPDATED_SYSTEM_APP '; then
+                        UPDATED_SYSTEM_APP=true
+                        ui_print "* $PKG_NAME is an updated system app"
+                else
+                        UPDATED_SYSTEM_APP=false
+                        ui_print "* $PKG_NAME is a system app"
+                fi
+        else
+                IS_SYSTEM_APP=false
+        fi
 fi
 
 INS=true
 if BASEPATH=$(get_basepath); then
-        if [ "${BASEPATH:1:4}" != data ]; then
-                ui_print "* Detected $PKG_NAME as a system app"
-                SCNM="/data/adb/post-fs-data.d/$PKG_NAME-uninstall.sh"
-                mkdir -p /data/adb/post-fs-data.d
-                echo "mount -t tmpfs none $BASEPATH" >"$SCNM"
-                chmod +x "$SCNM"
-                ui_print "* Created the uninstall script."
-                ui_print ""
-                ui_print "* Reboot and reflash the module!"
-                abort
-        fi
-
         VERSION=$(get_app_version)
         if [ "$VERSION" ] && [ "$VERSION" = "$PKG_VER" ]; then
                 ui_print "* $PKG_NAME is up-to-date ($VERSION)"
@@ -183,6 +185,32 @@ install() {
                 if ! op=$(pmex install-commit "$SES"); then
                         ui_print "$op"
                         if echo "$op" | grep -q -e INSTALL_FAILED_VERSION_DOWNGRADE -e INSTALL_FAILED_UPDATE_INCOMPATIBLE -e INSTALL_FAILED_DUPLICATE; then
+                                if [ "$IS_SYSTEM_APP" = true ]; then
+                                        if [ "$UPDATED_SYSTEM_APP" = true ]; then
+                                                ui_print "* Uninstalling updated system app..."
+                                                if ! op=$(pmex uninstall --user 0 "$PKG_NAME"); then
+                                                        ui_print "$op"
+                                                fi
+                                        fi
+                                        if ! BASEPATH=$(get_basepath); then
+                                                install_err="ERROR: basepath failed."
+                                                break
+                                        fi
+                                        ui_print "* Debloating $BASEPATH"
+
+                                        mkdir -p "$RV_DIR/empty" /data/adb/post-fs-data.d
+                                        chcon u:object_r:system_file:s0 "$RV_DIR/empty"
+                                        P="/data/adb/post-fs-data.d/$PKG_NAME-uninstall.sh"
+                                        echo "mount -o bind $RV_DIR/empty ${BASEPATH}" >"$P"
+                                        chmod +x "$P"
+
+                                        ui_print "* Created the uninstall script."
+                                        ui_print ""
+                                        ui_print "* Reboot and reflash the module!"
+                                        install_err=" "
+                                        break
+                                fi
+
                                 ui_print "* Uninstalling..."
                                 if ! op=$(pmex uninstall --user 0 "$PKG_NAME"); then
                                         ui_print "$op"
@@ -256,9 +284,6 @@ else
 fi
 am force-stop "$PKG_NAME"
 # ---MOUNT-STAGE-END---
-
-ui_print "* Optimizing $PKG_NAME"
-cmd package compile -m speed-profile -f "$PKG_NAME" >/dev/null 2>&1
 
 if [ "$MOUNT_MODE" != nomount ] && { [ "$KSU" ] || [ -f /data/adb/ksu/bin/ksud ]; }; then
         DUMPSYS=$(dumpsys package "$PKG_NAME" 2>&1)
