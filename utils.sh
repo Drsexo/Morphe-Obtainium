@@ -839,7 +839,7 @@ patch_apk() {
         local cmd="java -jar '$cli_jar' patch '$stock_input' -o '$patched_apk' $patches_arg --keystore=ks.keystore \
 --keystore-entry-password=987654321 --keystore-password=987654321 --signer=DrSexo --keystore-entry-alias=DrSexo -t '$tmp_files' $patcher_args"
         pr "$cmd"
-        if eval "$cmd"; then
+        if eval "$cmd" 2>&1 | sed '/does not contain all region localizations/d'; then
                 [ -f "$patched_apk" ]
         else
                 rm "$patched_apk" 2>/dev/null || :
