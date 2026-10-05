@@ -521,11 +521,11 @@ merge_splits() {
                 zip -d "${bundle}" $remove_arch 2>/dev/null || true
         fi
 
-        if [[ "${output##*/}" == com.facebook.katana-* ]]; then
+        if [[ "${output##*/}" == com.facebook.katana-* || "${output##*/}" == com.instagram.android-* ]]; then
                 local ad_splits
                 ad_splits=$(unzip -l "${bundle}" 2>/dev/null | grep -oP '[^ ]*helium[^ ]*\.apk') || true
                 if [ -n "$ad_splits" ]; then
-                        pr "Removing $(echo "$ad_splits" | wc -l) Helium ad engine splits: $(echo "$ad_splits" | tr '\n' ' ')"
+                        pr "Removing $(echo "$ad_splits" | wc -l) Helium runtime splits: $(echo "$ad_splits" | tr '\n' ' ')"
                         zip -d "${bundle}" $ad_splits 2>/dev/null || true
                 fi
         fi
@@ -644,13 +644,13 @@ apkmirror_search() {
         done
         if [ -n "$fallback_url" ]; then
                 [ -n "$vcode" ] && wpr "apkmirror_search: version code ${vcode} not found on the page, falling back to variant matching" >&2
-                pr "apkmirror_search: no ${apk_bundle} ${arch} ${dpi:-nodpi} row, falling back to ${fallback_url##*/}" >&2
+                pr "apkmirror_search: no ${apk_bundle} ${arch} ${dpi:-nodpi} row, falling back to $(basename "${fallback_url%/}")" >&2
                 echo "$fallback_url"
                 return 0
         fi
         if [ -n "$anyfallback_url" ]; then
                 [ -n "$vcode" ] && wpr "apkmirror_search: version code ${vcode} not found on the page, falling back to variant matching" >&2
-                pr "apkmirror_search: no ${apk_bundle} ${arch} ${dpi:-nodpi} row, falling back to ${anyfallback_url##*/}" >&2
+                pr "apkmirror_search: no ${apk_bundle} ${arch} ${dpi:-nodpi} row, falling back to $(basename "${anyfallback_url%/}")" >&2
                 echo "$anyfallback_url"
                 return 0
         fi
