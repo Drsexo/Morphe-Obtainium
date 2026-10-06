@@ -24,7 +24,7 @@ version = "latest"
 [Reddit-Morphe]
 app-name = "Reddit"
 brand = "Morphe"
-build-mode = "both"
+build-mode = "apk"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/redditinc/reddit/"
 version = "latest"
 
