@@ -45,7 +45,7 @@ brand = "Piko"
 pkg-name = "com.instagram.android"
 build-mode = "apk"
 apkmirror-dlurl = "https://www.apkmirror.com/apk/instagram/instagram-instagram"
-version = "447.0.0.55.81"
+version = "auto"
 patches-source = "crimera/piko"
 patches-version = "dev"
 

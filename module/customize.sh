@@ -119,9 +119,12 @@ ui_print "* Un-mounting existing binds"
 umount_all
 [ "$PREV_MODE" = nomount ] && nm_uninject
 
+IS_SYSTEM_APP=false
+UPDATED_SYSTEM_APP=false
 if ! OP=$(dumpsys package "$PKG_NAME") || [ -z "$OP" ]; then
         if pmex install-existing "$PKG_NAME" >/dev/null 2>&1; then
                 pmex uninstall-system-updates "$PKG_NAME" >/dev/null 2>&1
+                IS_SYSTEM_APP=true
         fi
 else
         PKG_FLAGS=$(echo "$OP" | grep -m1 pkgFlags)
@@ -131,11 +134,8 @@ else
                         UPDATED_SYSTEM_APP=true
                         ui_print "* $PKG_NAME is an updated system app"
                 else
-                        UPDATED_SYSTEM_APP=false
                         ui_print "* $PKG_NAME is a system app"
                 fi
-        else
-                IS_SYSTEM_APP=false
         fi
 fi
 
@@ -185,13 +185,7 @@ install() {
                 if ! op=$(pmex install-commit "$SES"); then
                         ui_print "$op"
                         if echo "$op" | grep -q -e INSTALL_FAILED_VERSION_DOWNGRADE -e INSTALL_FAILED_UPDATE_INCOMPATIBLE -e INSTALL_FAILED_DUPLICATE; then
-                                if [ "$IS_SYSTEM_APP" = true ]; then
-                                        if [ "$UPDATED_SYSTEM_APP" = true ]; then
-                                                ui_print "* Uninstalling updated system app..."
-                                                if ! op=$(pmex uninstall --user 0 "$PKG_NAME"); then
-                                                        ui_print "$op"
-                                                fi
-                                        fi
+                                if [ "$IS_SYSTEM_APP" = true ] && [ "$UPDATED_SYSTEM_APP" = false ]; then
                                         if ! BASEPATH=$(get_basepath); then
                                                 install_err="ERROR: basepath failed."
                                                 break
@@ -211,13 +205,23 @@ install() {
                                         break
                                 fi
 
-                                ui_print "* Uninstalling..."
-                                if ! op=$(pmex uninstall --user 0 "$PKG_NAME"); then
-                                        ui_print "$op"
-                                        if [ $IT = 2 ]; then
-                                                install_err="ERROR: pm uninstall failed."
-                                                break
+                                if [ "$UPDATED_SYSTEM_APP" = true ]; then
+                                        ui_print "* Uninstalling updated system app..."
+                                        if ! op=$(pmex uninstall-system-updates "$PKG_NAME" 2>&1); then
+                                                ui_print "$op"
+                                        else
+                                                UPDATED_SYSTEM_APP=false
                                         fi
+                                else
+                                        ui_print "* Uninstalling user app..."
+                                        if ! op=$(pmex uninstall --user 0 "$PKG_NAME"); then
+                                                ui_print "$op"
+                                        fi
+                                fi
+
+                                if [ $IT = 2 ]; then
+                                        install_err="ERROR: uninstall failed."
+                                        break
                                 fi
                                 continue
                         fi
