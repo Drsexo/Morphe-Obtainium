@@ -139,7 +139,7 @@ get_prebuilts() {
                                         fi
                                 fi
                         else
-                                matches=$(jq -e '.assets | map(select(.name | (endswith(".asc") or endswith(".json") or endswith(".txt")) | not))' <<<"$resp")
+                                matches=$(jq -e '.assets | map(select(.name | (endswith(".asc") or endswith(".json") or endswith(".txt") or endswith(".sig")) | not))' <<<"$resp")
                                 if [ "$(jq 'length' <<<"$matches")" -eq 0 ]; then
                                         wpr "No asset found for ${tag} from ${src}"
                                         return 1
