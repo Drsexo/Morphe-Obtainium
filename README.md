@@ -5,13 +5,14 @@
 
 ![YouTube](https://img.shields.io/endpoint?style=flat-square&logo=youtube&logoColor=%23FF0000&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fyoutube-morphe-badge.json)
 ![YouTube Music](https://img.shields.io/endpoint?style=flat-square&logo=youtubemusic&logoColor=%23FF0000&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fyoutube-music-morphe-badge.json)
-![Reddit](https://img.shields.io/endpoint?style=flat-square&logo=reddit&logoColor=%23FF4500&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Freddit-morphe-badge.json)
-![X](https://img.shields.io/endpoint?style=flat-square&logo=x&logoColor=%23000000&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fx-piko-badge.json)
+![Reddit](https://img.shields.io/endpoint?style=flat-square&logo=reddit&logoColor=%23FF4500&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Freddit-morphe-badge.json)  
 ![Instagram](https://img.shields.io/endpoint?style=flat-square&logo=instagram&logoColor=%23E4405F&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Finstagram-piko-badge.json)
-![Messenger](https://img.shields.io/endpoint?style=flat-square&logo=messenger&logoColor=%2300B2FF&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fmessenger-hush-badge.json)
+![X](https://img.shields.io/endpoint?style=flat-square&logo=x&logoColor=%23000000&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fx-piko-badge.json)  
 ![Facebook](https://img.shields.io/endpoint?style=flat-square&logo=facebook&logoColor=%230187F2&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Ffacebook-hush-badge.json)
-![Google Photos](https://img.shields.io/endpoint?style=flat-square&logo=googlephotos&logoColor=%23F4B400&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fgoogle-photos-morphe-badge.json)
-
+![Messenger](https://img.shields.io/endpoint?style=flat-square&logo=messenger&logoColor=%2300B2FF&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fmessenger-hush-badge.json)  
+![Discord](https://img.shields.io/endpoint?style=flat-square&logo=discord&logoColor=%235865F2&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fdiscord-venus-badge.json)
+![Twitch](https://img.shields.io/endpoint?style=flat-square&logo=twitch&logoColor=%239146FF&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Ftwitch-lurk-badge.json)
+![Google Photos](https://img.shields.io/endpoint?style=flat-square&logo=googlephotos&logoColor=%23F4B400&color=%237028E7&url=https%3A%2F%2Fraw.githubusercontent.com%2FDrsexo%2FMorphe-Obtainium%2Fupdate%2Fgoogle-photos-morphe-badge.json)  
 </div>
 
 Automated builder for Morphe, Piko, Hush, Lurk and Venus patched apps with Obtainium support.  
