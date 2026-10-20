@@ -37,6 +37,8 @@ Fork of [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-mo
 | <img src="docs/messenger.png" width="30" height="30"> **Messenger** | Hush | APK | [![Add][badge]][obt] |
 | <img src="docs/facebook.png" width="30" height="30"> **Facebook** | Hush | APK | [![Add][badge]][obt] |
 | <img src="docs/google-photos.png" width="30" height="30"> **Google Photos** | Morphe | APK + Module | [![Add][badge]][obt] |
+| <img src="docs/twitch.png" width="30" height="30"> **Twitch** | Lurk | APK | [![Add][badge]][obt] |
+| <img src="docs/discord.png" width="30" height="30"> **Discord** | Venus | APK | [![Add][badge]][obt] |
 
 [badge]: https://img.shields.io/badge/Add-Add?style=flat-square&logo=Obtainium&logoColor=%23ffffff&logoSize=auto&color=%237028E7
 [obt]: https://drsexo.github.io/Morphe-Obtainium/Obtainium.html

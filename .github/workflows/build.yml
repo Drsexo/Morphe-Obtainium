@@ -34,6 +34,14 @@ on:
         description: "Google Photos"
         type: boolean
         default: true
+      build_twitch:
+        description: "Twitch"
+        type: boolean
+        default: true
+      build_discord:
+        description: "Discord"
+        type: boolean
+        default: true
   schedule:
     - cron: "0 0 * * *"
 
@@ -68,6 +76,8 @@ jobs:
           BUILD_MESSENGER: ${{ github.event.inputs.build_messenger }}
           BUILD_FACEBOOK: ${{ github.event.inputs.build_facebook }}
           BUILD_GOOGLE_PHOTOS: ${{ github.event.inputs.build_google_photos }}
+          BUILD_TWITCH: ${{ github.event.inputs.build_twitch }}
+          BUILD_DISCORD: ${{ github.event.inputs.build_discord }}
         run: |
           if [ "$IS_MANUAL" = "true" ]; then
             FILTER=""
@@ -79,6 +89,8 @@ jobs:
             [ "$BUILD_MESSENGER" = "true" ] && FILTER="${FILTER:+$FILTER,}Messenger-Hush"
             [ "$BUILD_FACEBOOK" = "true" ] && FILTER="${FILTER:+$FILTER,}Facebook-Hush"
             [ "$BUILD_GOOGLE_PHOTOS" = "true" ] && FILTER="${FILTER:+$FILTER,}Google-Photos-Morphe"
+            [ "$BUILD_TWITCH" = "true" ] && FILTER="${FILTER:+$FILTER,}Twitch-Lurk"
+            [ "$BUILD_DISCORD" = "true" ] && FILTER="${FILTER:+$FILTER,}Discord-Venus"
             echo "Manual trigger - build filter: ${FILTER:-none selected}"
             if [ -n "$FILTER" ]; then
               echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT
@@ -124,6 +136,8 @@ jobs:
           BUILD_MESSENGER="false"
           BUILD_FACEBOOK="false"
           BUILD_GOOGLE_PHOTOS="false"
+          BUILD_TWITCH="false"
+          BUILD_DISCORD="false"
 
           MORPHE_PATCHES_VER=$(get_patches_version "YouTube-Morphe")
           MORPHE_LAST_VER=$(get_last_patches_ver "morphe-patches")
@@ -197,13 +211,39 @@ jobs:
             BUILD_GOOGLE_PHOTOS="true"
           fi
 
+          TWITCH_PATCHES_VER=$(get_patches_version "Twitch-Lurk")
+          TWITCH_LAST_VER=$(get_last_patches_ver "lurk-morphe-patches")
+          if [ "$TWITCH_PATCHES_VER" = "dev" ]; then
+            TWITCH_LATEST=$(get_latest_upstream_ver "jordanwoodson/lurk-morphe-patches" "true")
+          else
+            TWITCH_LATEST=$(get_latest_upstream_ver "jordanwoodson/lurk-morphe-patches" "false")
+          fi
+          if [ -z "$TWITCH_LAST_VER" ] || [ "$TWITCH_LAST_VER" != "$TWITCH_LATEST" ]; then
+            echo "Twitch patches (lurk-morphe-patches): '${TWITCH_LAST_VER:-none}' -> '${TWITCH_LATEST}'"
+            BUILD_TWITCH="true"
+          fi
+
+          DISCORD_PATCHES_VER=$(get_patches_version "Discord-Venus")
+          DISCORD_LAST_VER=$(get_last_patches_ver "venus-patches")
+          if [ "$DISCORD_PATCHES_VER" = "dev" ]; then
+            DISCORD_LATEST=$(get_latest_upstream_ver "VenusIsJaded/Venus-Patches" "true")
+          else
+            DISCORD_LATEST=$(get_latest_upstream_ver "VenusIsJaded/Venus-Patches" "false")
+          fi
+          if [ -z "$DISCORD_LAST_VER" ] || [ "$DISCORD_LAST_VER" != "$DISCORD_LATEST" ]; then
+            echo "Discord patches (Venus-Patches): '${DISCORD_LAST_VER:-none}' -> '${DISCORD_LATEST}'"
+            BUILD_DISCORD="true"
+          fi
+
           BUILD_FILTER=""
-          [ "$BUILD_MORPHE" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}youtube-morphe,youtube-music-morphe,reddit-morphe"
+          [ "$BUILD_MORPHE" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}youtube-morphe,youtube-music-morphe,reddit-morphe,discord-venus"
           [ "$BUILD_X" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}x-piko"
           [ "$BUILD_INSTAGRAM" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}instagram-piko"
           [ "$BUILD_MESSENGER" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}messenger-hush"
           [ "$BUILD_FACEBOOK" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}facebook-hush"
           [ "$BUILD_GOOGLE_PHOTOS" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}google-photos-morphe"
+          [ "$BUILD_TWITCH" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}twitch-lurk"
+          [ "$BUILD_DISCORD" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}discord-venus"
 
           if [ -n "$BUILD_FILTER" ]; then
             echo "SHOULD_BUILD=1" >> $GITHUB_OUTPUT

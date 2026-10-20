@@ -5,7 +5,7 @@ CWD=$(pwd)
 TEMP_DIR="temp"
 BIN_DIR="bin"
 BUILD_DIR="build"
-DL_SRCS=("direct" "apkmirror" "uptodown")
+DL_SRCS=("direct" "apkmirror")
 
 if [ "${GITHUB_TOKEN-}" ]; then GH_HEADER="Authorization: token ${GITHUB_TOKEN}"; else GH_HEADER=; fi
 NEXT_VER_CODE=${NEXT_VER_CODE:-$(date +'%Y%m%d')}
@@ -666,15 +666,48 @@ dl_apkmirror() {
                 merge_splits "${output}.apkm" "${output}" "${arch}" || return 1
                 return 0
         fi
-        local resp node app_table apkmname dlurl=""
+        local resp node="" app_table apkmname dlurl="" from_upload=false
+        local app_slug="${1%/}"
+        app_slug="${app_slug##*/}"
         apkmname=$($HTMLQ "h1.marginZero" --text <<<"$__APKMIRROR_RESP__")
         apkmname="${apkmname,,}" apkmname="${apkmname// /-}" apkmname="${apkmname//[^a-z0-9-]/}"
         local search_version=${version//./-}
         search_version=${search_version//_/-}
         search_version=${search_version,,}
-        url="${url}/${apkmname}-${search_version}-release/"
-        resp=$(req "$url" -) || return 1
-        node=$($HTMLQ "div.table-row.headerFont:nth-last-child(1)" -r "span:nth-child(n+3)" <<<"$resp")
+        search_version=$(tr -s '-' <<<"$search_version")
+        url="${url%/}/${apkmname}-${search_version}-release/"
+        resp=$(req "$url" -)
+        if [ -z "$resp" ]; then
+                local rel rel_dl
+                case "${args[apkmirror_type]:-}" in
+                        apk) rel_dl="android-apk-download" ;;
+                        *) rel_dl="bundle-download" ;;
+                esac
+                while IFS= read -r rel; do
+                        [ -z "$rel" ] && continue
+                        if ! resp=$(req "$rel" -); then resp=""; continue; fi
+                        if [[ "$rel" == *-release/ ]] && [ -n "$vcode" ] && ! grep -qw "$vcode" <<<"$resp"; then
+                                wpr "apkmirror_search: version code ${vcode} not on $(basename "${rel%/}"), trying next"
+                                resp=""; continue
+                        fi
+                        if [[ "$rel" == *-${rel_dl}/ ]]; then
+                                if [ "$rel_dl" = "bundle-download" ]; then is_bundle=true; else is_bundle=false; fi
+                                from_upload=true
+                        fi
+                        pr "APKMirror: using ${rel}"
+                        break
+                done <<<"$($HTMLQ --base https://www.apkmirror.com --attributes href a <<<"$__APKMIRROR_RESP__" 2>/dev/null \
+                        | grep -E "/apk/[a-z0-9-]+/${app_slug}/[^/]*-${search_version}(-[a-z]+)*-(release|${rel_dl})/$" \
+                        | grep -vxF "$url" \
+                        | awk -v pat="-${rel_dl}/\$" '!seen[$0]++ { if ($0 ~ pat) { d[++n]=$0 } else { print } } END { for (i = 1; i <= n; i++) print d[i] }')"
+                if [ -z "$resp" ]; then
+                        epr "APKMirror: no release page for '${version}' under /apk/*/${app_slug}/ (-${search_version}(-channel)-(release|${rel_dl}))"
+                        return 1
+                fi
+        fi
+        if [ "$from_upload" = false ]; then
+                node=$($HTMLQ "div.table-row.headerFont:nth-last-child(1)" -r "span:nth-child(n+3)" <<<"$resp")
+        fi
         if [ "$node" ]; then
                 local am_types="BUNDLE APK"
                 case "${args[apkmirror_type]:-}" in
@@ -730,64 +763,6 @@ get_apkmirror_resp() {
         __APKMIRROR_CAT__="${1##*/}"
 }
 
-get_uptodown_resp() {
-        __UPTODOWN_RESP__=$(req "${1}/versions" -) || return 1
-        __UPTODOWN_RESP_PKG__=$(req "${1}/download" -) || return 1
-}
-get_uptodown_vers() { $HTMLQ --text ".version" <<<"$__UPTODOWN_RESP__"; }
-dl_uptodown() {
-        local uptodown_dlurl=$1 version=$2 output=$3 arch=$4 _dpi=$5
-
-        local apparch=('arm64-v8a, armeabi-v7a, x86_64' 'arm64-v8a, armeabi-v7a, x86, x86_64' 'arm64-v8a, armeabi-v7a' 'arm64-v8a')
-
-        local op resp data_code
-        data_code=$($HTMLQ "#detail-app-name" --attributes data-code <<<"$__UPTODOWN_RESP__")
-        local versionURL=""
-        local is_bundle=false
-        for i in {1..20}; do
-                resp=$(req "${uptodown_dlurl}/apps/${data_code}/versions/${i}" -) || continue
-                if ! op=$(jq -e -r ".data | map(select(.version == \"${version}\")) | .[0]" <<<"$resp" 2>/dev/null); then
-                        continue
-                fi
-                if [ "$(jq -e -r ".kindFile" <<<"$op" 2>/dev/null)" = "xapk" ]; then is_bundle=true; fi
-                if versionURL=$(jq -e -r '.versionURL' <<<"$op" 2>/dev/null); then break; else continue; fi
-        done
-        if [ -z "$versionURL" ]; then return 1; fi
-        versionURL=$(jq -e -r '.url + "/" + .extraURL + "/" + (.versionID | tostring)' <<<"$versionURL" 2>/dev/null) || return 1
-        resp=$(req "$versionURL" -) || return 1
-
-        local data_version files node_arch="" data_file_id node_class
-        data_version=$($HTMLQ '.button.variants' --attributes data-version <<<"$resp") || return 1
-        if [ "$data_version" ]; then
-                files=$(req "${uptodown_dlurl%/*}/app/${data_code}/version/${data_version}/files" - | jq -e -r .content) || return 1
-                for ((n = 1; n < 12; n += 1)); do
-                        node_class=$($HTMLQ -i -t ".content > :nth-child($n)" --attributes class <<<"$files") || return 1
-                        if [ "$node_class" != "variant" ]; then
-                                node_arch=$($HTMLQ -i -t ".content > :nth-child($n)" <<<"$files" | xargs) || return 1
-                                continue
-                        fi
-                        if [ -z "$node_arch" ]; then return 1; fi
-                        if ! isoneof "$node_arch" "${apparch[@]}"; then continue; fi
-
-                        file_type=$($HTMLQ -i -t ".content > :nth-child($n) > .v-file > span" <<<"$files") || return 1
-                        if [ "$file_type" = "xapk" ]; then is_bundle=true; else is_bundle=false; fi
-                        data_file_id=$($HTMLQ ".content > :nth-child($n) > .v-report" --attributes data-file-id <<<"$files") || return 1
-                        resp=$(req "${uptodown_dlurl}/download/${data_file_id}-x" -)
-                        break
-                done
-                if [ $n -eq 12 ]; then return 1; fi
-        fi
-        local data_url
-        data_url=$($HTMLQ "#detail-download-button" --attributes data-url <<<"$resp") || return 1
-        if [ $is_bundle = true ]; then
-                req "https://dw.uptodown.com/dwn/${data_url}" "$output.apkm" || return 1
-                merge_splits "${output}.apkm" "${output}" "${arch}"
-        else
-                req "https://dw.uptodown.com/dwn/${data_url}" "$output"
-        fi
-}
-get_uptodown_pkg_name() { $HTMLQ --text "tr.full:nth-child(1) > td:nth-child(3)" <<<"$__UPTODOWN_RESP_PKG__"; }
-
 dl_archive() {
         local url=$1 version=$2 output=$3 arch=$4
         local path version=${version// /}
@@ -832,10 +807,11 @@ get_direct_pkg_name() { cut -d- -f1 <<<"$__DIRECT_APKNAME__"; }
 get_direct_resp() { __DIRECT_APKNAME__=$(awk -F/ '{print $NF}' <<<"$1"); }
 
 patch_apk() {
-        local stock_input=$1 patched_apk=$2 patcher_args=$3 cli_jar=$4 patches_jar=$5
+        local stock_input=$1 patched_apk=$2 patcher_args=$3 cli_jar=$4 patches_jar=$5 extra_patches_jar=${6:-}
         local tmp_files
         tmp_files="$(pwd)/$(mktemp -d -p "$TEMP_DIR")"
         local patches_arg="--patches '$patches_jar'"
+        [ -n "$extra_patches_jar" ] && patches_arg="$patches_arg --patches '$extra_patches_jar'"
         local cmd="java -jar '$cli_jar' patch '$stock_input' -o '$patched_apk' $patches_arg --keystore=ks.keystore \
 --keystore-entry-password=987654321 --keystore-password=987654321 --signer=DrSexo --keystore-entry-alias=DrSexo -t '$tmp_files' $patcher_args"
         pr "$cmd"
@@ -903,7 +879,7 @@ get_patch_version_code() {
         local list_patches=$1 version=$2
         local vesc=${version//./\\.}
         local codes
-        codes=$(grep -oP "^[[:space:]]*${vesc}:[[:space:]]*ARM64_V8A=\K[0-9]+" <<<"$list_patches" | sort -u)
+        codes=$(grep -oP "^[[:space:]]*${vesc}(?:[[:space:]]+-[^:]*)?:[[:space:]]*ARM64_V8A=\K[0-9]+" <<<"$list_patches" | sort -u)
         if [ -z "$codes" ]; then return 1; fi
         if [ "$(wc -l <<<"$codes")" -gt 1 ]; then
                 wpr "Patches declare conflicting ARM64_V8A codes for '${version}', not pinning: $(echo "$codes" | tr '\n' ' ')"
@@ -1088,7 +1064,7 @@ build_rv() {
 
                 local apk_output="${BUILD_DIR}/${app_name_l}-${rv_brand_f}-v${version_f}-${arch_f}.apk"
                 if [ "${NORB:-}" != true ] || { [ ! -f "$patched_apk" ] && [ ! -f "$apk_output" ]; }; then
-                        if ! patch_apk "$stock_apk_to_patch" "$patched_apk" "${patcher_args[*]}" "${args[cli]}" "${args[ptjar]}"; then
+                        if ! patch_apk "$stock_apk_to_patch" "$patched_apk" "${patcher_args[*]}" "${args[cli]}" "${args[ptjar]}" "${args[extra_ptjar]:-}"; then
                                 rm -f "$stock_apk_to_patch"
                                 if [ "$use_version_fallback" = true ] && [ "$build_mode" = "${build_mode_arr[0]}" ]; then
                                         pr "Patching failed for '${table}' v${version_f}, trying older versions..."
@@ -1128,7 +1104,7 @@ build_rv() {
                                                         local fb_stripped="${fb_stock}.stripped.apk"
                                                         prep_patch_input "$fb_stock" "$fb_stripped" "$build_mode"
 
-                                                        if patch_apk "$fb_stripped" "$fb_patched" "${patcher_args[*]}" "${args[cli]}" "${args[ptjar]}"; then
+                                                        if patch_apk "$fb_stripped" "$fb_patched" "${patcher_args[*]}" "${args[cli]}" "${args[ptjar]}" "${args[extra_ptjar]:-}"; then
                                                                 rm -f "$fb_stripped"
                                                                 pr "Fallback succeeded: v${fallback_ver} for ${table}"
                                                                 version="$fallback_ver"

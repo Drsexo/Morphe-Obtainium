@@ -117,6 +117,20 @@ for table_name in $(toml_get_table_names); do
         app_args[ptjar]=$patches_jar
         app_args[patches_src]=$patches_src
 
+        app_args[extra_ptjar]=""
+        extra_patches_src=""
+        if extra_patches_src=$(toml_get "$t" extra-patches-source); then
+                extra_patches_ver=""
+                extra_patches_ver=$(toml_get "$t" extra-patches-version) || extra_patches_ver="latest"
+                if ! EXTRA_PREBUILTS="$(get_prebuilts "$cli_src" "$cli_ver" "$extra_patches_src" "$extra_patches_ver")"; then
+                        echo "${table_name}|FAILED|Could not download extra prebuilts (${extra_patches_src})" >> "$TEMP_DIR/build_failed.log"
+                        continue
+                fi
+                read -r extra_patches_jar _extra_cli <<<"$EXTRA_PREBUILTS"
+                app_args[extra_ptjar]=$extra_patches_jar
+                pr "Extra patch bundle for ${table_name}: ${extra_patches_src} ($(basename "$extra_patches_jar"))"
+        fi
+
         app_args[riplib]=$(toml_get "$t" riplib) || app_args[riplib]=$DEF_RIPLIB
         app_args[cli_supports_striplibs]=$(check_striplibs "$cli_jar")
 
@@ -195,7 +209,7 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
         brand_lower="${brand,,}"
         cli_name=""
         cli_changelog=""
-        if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]] || [[ "$brand_lower" == *"hush"* ]]; then
+        if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]] || [[ "$brand_lower" == *"hush"* ]] || [[ "$brand_lower" == *"lurk"* ]] || [[ "$brand_lower" == *"venus"* ]]; then
                 cli_name="Morphe CLI"
                 cli_changelog="[CLI](https://github.com/MorpheApp/morphe-desktop/releases)"
         else
@@ -223,6 +237,8 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
                 "messenger") app_icon="${raw_base}/messenger.png" ;;
                 "facebook") app_icon="${raw_base}/facebook.png" ;;
                 "google photos") app_icon="${raw_base}/google-photos.png" ;;
+                "twitch") app_icon="${raw_base}/twitch.png" ;;
+                "discord") app_icon="${raw_base}/discord.png" ;;
         esac
 
         needs_microg=false
