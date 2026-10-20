@@ -14,12 +14,12 @@
 
 </div>
 
-Automated builder for Morphe, Piko and Hush patched apps with Obtainium support.  
-Fork of [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module), focused on Morphe/Piko/Hush patches and arm64-only builds.
+Automated builder for Morphe, Piko, Hush, Lurk and Venus patched apps with Obtainium support.  
+Fork of [j-hc/revanced-magisk-module](https://github.com/j-hc/revanced-magisk-module), focused on arm64-only builds.
 
 ## What's different
 
-- **Morphe, Piko and Hush patches** instead of ReVanced
+- **Morphe, Piko, Hush, Lurk and Venus patches** from independent patch sources
 - **Per-app releases**: each app gets its own release tag, easy to roll back
 - **Auto-fallback**: if the latest app version fails to patch, tries older versions automatically
 - **Smaller APKs**: arm64 only, strips other libs

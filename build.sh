@@ -30,7 +30,7 @@ DEF_PATCHES_VER=$(toml_get "$main_config_t" patches-version) || DEF_PATCHES_VER=
 DEF_CLI_VER=$(toml_get "$main_config_t" cli-version) || DEF_CLI_VER="latest"
 DEF_PATCHES_SRC=$(toml_get "$main_config_t" patches-source) || DEF_PATCHES_SRC="MorpheApp/morphe-patches"
 DEF_CLI_SRC=$(toml_get "$main_config_t" cli-source) || DEF_CLI_SRC="MorpheApp/morphe-desktop"
-DEF_RV_BRAND=$(toml_get "$main_config_t" brand) || DEF_RV_BRAND=$(toml_get "$main_config_t" rv-brand) || DEF_RV_BRAND="Morphe"
+DEF_RV_BRAND=$(toml_get "$main_config_t" brand) || DEF_RV_BRAND="Morphe"
 DEF_RIPLIB=$(toml_get "$main_config_t" riplib) || DEF_RIPLIB="true"
 DEF_INCLUDE_STOCK=$(toml_get "$main_config_t" include-stock) || DEF_INCLUDE_STOCK="merged"
 if ! isoneof "$DEF_INCLUDE_STOCK" disable merged split; then
@@ -85,7 +85,7 @@ for table_name in $(toml_get_table_names); do
         vtf "$enabled" "enabled"
         if [ "$enabled" = false ]; then continue; fi
 
-        local_rv_brand=$(toml_get "$t" brand) || local_rv_brand=$(toml_get "$t" rv-brand) || local_rv_brand=$DEF_RV_BRAND
+        local_rv_brand=$(toml_get "$t" brand) || local_rv_brand=$DEF_RV_BRAND
         brand_lower="${local_rv_brand,,}"
 
         if ! should_build "$table_name" "$brand_lower"; then
@@ -206,20 +206,12 @@ while IFS='|' read -r table_name version app_name brand patches_src patches_ver 
 
         patches_display="${patches_ver}"
 
-        brand_lower="${brand,,}"
-        cli_name=""
-        cli_changelog=""
-        if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]] || [[ "$brand_lower" == *"hush"* ]] || [[ "$brand_lower" == *"lurk"* ]] || [[ "$brand_lower" == *"venus"* ]]; then
-                cli_name="Morphe CLI"
-                cli_changelog="[CLI](https://github.com/MorpheApp/morphe-desktop/releases)"
-        else
-                cli_name="ReVanced CLI"
-                cli_changelog="[CLI](https://github.com/inotia00/revanced-cli/releases)"
-        fi
+        cli_name="Morphe CLI"
+        cli_changelog="[CLI](https://github.com/MorpheApp/morphe-desktop/releases)"
         patches_changelog="[Patches](https://github.com/${patches_src}/releases)"
 
         cli_ver_display=""
-        for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/morphe-desktop-*.jar "$TEMP_DIR"/*/revanced-cli-*.jar; do
+        for cli_file in "$TEMP_DIR"/*/morphe-cli-*.jar "$TEMP_DIR"/*/morphe-desktop-*.jar; do
                 if [ -f "$cli_file" ]; then
                         cli_ver_display=$(extract_cli_version "$cli_file")
                         break

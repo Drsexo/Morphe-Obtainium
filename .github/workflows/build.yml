@@ -496,20 +496,12 @@ jobs:
             [ -z "$table_name" ] && continue
 
             patches_display="${patches_ver}"
-            brand_lower="${brand,,}"
-            cli_name=""
-            cli_link=""
-            if [[ "$brand_lower" == *"morphe"* ]] || [[ "$brand_lower" == *"piko"* ]] || [[ "$brand_lower" == *"hush"* ]]; then
-              cli_name="Morphe CLI"
-              cli_link='<a href="https://github.com/MorpheApp/morphe-desktop/releases">CLI</a>'
-            else
-              cli_name="ReVanced CLI"
-              cli_link='<a href="https://github.com/inotia00/revanced-cli/releases">CLI</a>'
-            fi
+            cli_name="Morphe CLI"
+            cli_link='<a href="https://github.com/MorpheApp/morphe-desktop/releases">CLI</a>'
             patches_link="<a href=\"https://github.com/${patches_src}/releases\">Patches</a>"
 
             cli_ver_display=""
-            for cli_file in temp/*/morphe-cli-*.jar temp/*/morphe-desktop-*.jar temp/*/revanced-cli-*.jar; do
+            for cli_file in temp/*/morphe-cli-*.jar temp/*/morphe-desktop-*.jar; do
               if [ -f "$cli_file" ]; then
                 cli_ver_display=$(extract_cli_version "$cli_file")
                 break
