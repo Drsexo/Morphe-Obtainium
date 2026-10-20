@@ -347,7 +347,11 @@ _req() {
                 fi
         fi
         if ! "$CREQ" -L -c "$TEMP_DIR/cookie.txt" -b "$TEMP_DIR/cookie.txt" --connect-timeout 10 --retry 1 --fail -s -S "$@" "$ip" -o "$dlp"; then
-                epr "Request failed: $ip"
+                if [ "${REQ_EXPECTED_FAIL:-}" = 1 ]; then
+                        wpr "Request failed: $ip"
+                else
+                        epr "Request failed: $ip"
+                fi
                 if [ "$dlp" != - ]; then rm -f "$dlp"; fi
                 return 1
         fi
@@ -676,7 +680,7 @@ dl_apkmirror() {
         search_version=${search_version,,}
         search_version=$(tr -s '-' <<<"$search_version")
         url="${url%/}/${apkmname}-${search_version}-release/"
-        resp=$(req "$url" -)
+        resp=$(REQ_EXPECTED_FAIL=1 req "$url" -)
         if [ -z "$resp" ]; then
                 local rel rel_dl
                 case "${args[apkmirror_type]:-}" in
