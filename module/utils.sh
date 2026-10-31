@@ -106,7 +106,7 @@ nm_uninject() {
 
 mount_rv() {
         if [ ! -d "${1}/lib" ]; then
-                ch_desc_err "Your installation got broken. Dont report this, consider using rvmm-zygisk-mount."
+                ch_desc_err "Your installation got broken. Reinstall."
                 return 1
         fi
         VERSION=$(get_app_version)
@@ -146,7 +146,7 @@ mount_rv_now() {
 
 inject_rv() {
         if [ ! -d "${1}/lib" ]; then
-                ch_desc_err "Your installation got broken. Dont report this, consider using rvmm-zygisk-mount."
+                ch_desc_err "Your installation got broken. Reinstall."
                 return 1
         fi
         VERSION=$(get_app_version)

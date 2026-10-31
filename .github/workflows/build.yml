@@ -236,7 +236,7 @@ jobs:
           fi
 
           BUILD_FILTER=""
-          [ "$BUILD_MORPHE" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}youtube-morphe,youtube-music-morphe,reddit-morphe,discord-venus"
+          [ "$BUILD_MORPHE" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}youtube-morphe,youtube-music-morphe,reddit-morphe"
           [ "$BUILD_X" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}x-piko"
           [ "$BUILD_INSTAGRAM" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}instagram-piko"
           [ "$BUILD_MESSENGER" = "true" ] && BUILD_FILTER="${BUILD_FILTER:+$BUILD_FILTER,}messenger-hush"
