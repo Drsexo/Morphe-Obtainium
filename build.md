@@ -1,6 +1,7 @@
-# Build 2026-11-06
+# Build 2026-11-07
 
-X-Piko `12.40.1-prod.01` ✅  
-Facebook-Hush `585.0.0.47.54` ✅  
-Twitch-Lurk `31.8.0` ✅  
+YouTube-Morphe `21.44.534` ✅  
+YouTube-Music-Morphe `9.44.56` ✅  
+Reddit-Morphe `2026.45.0` ✅  
+Messenger-Hush `586.0.0.55.92` ✅  
 
