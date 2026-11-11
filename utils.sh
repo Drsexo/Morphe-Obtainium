@@ -582,7 +582,7 @@ merge_splits() {
         pr "Bundle after stripping:"
         unzip -l "${bundle}" 2>/dev/null | grep -i '\.apk$' | awk '{print "  " $NF " (" $1 " bytes)"}' || true
 
-        if ! OP=$(java -jar "$TEMP_DIR/apkeditor.jar" merge -i "${bundle}" -o "${bundle}.merged.apk" -clean-meta -f -extractNativeLibs true 2>&1); then
+        if ! OP=$(java -jar "$TEMP_DIR/apkeditor.jar" merge -i "${bundle}" -o "${bundle}.merged.apk" -f -extractNativeLibs true 2>&1); then
                 epr "Apkeditor ERROR: $OP"
                 return 1
         fi
@@ -828,11 +828,16 @@ patch_apk() {
 }
 
 prep_patch_input() {
-        local stock=$1 out=$2 mode=$3
+        local stock=$1 out=$2 mode=$3 cli_strips=${4:-false}
         cp -f "$stock" "$out"
         if [ "$mode" = module ]; then
                 zip -d "$out" "lib/*" >/dev/null 2>&1 || :
+        elif [ "$cli_strips" = true ]; then
+                return 0
         else
+                local foreign_libs
+                foreign_libs=$(unzip -l "$out" 2>/dev/null | grep -oP 'lib/(armeabi-v7a|x86|x86_64)/' | sort -u || true)
+                [ -z "$foreign_libs" ] && return 0
                 zip -d "$out" "lib/armeabi-v7a/*" "lib/x86_64/*" "lib/x86/*" >/dev/null 2>&1 || :
         fi
 }
@@ -1059,12 +1064,14 @@ build_rv() {
                         patcher_args+=("-d \"${branding_patch}\"")
                 fi
 
+                local cli_strips=false
                 if [ "$riplib" = true ] && [ "${args[cli_supports_striplibs]}" = true ] && [ "$build_mode" = "apk" ]; then
                         patcher_args+=("--striplibs arm64-v8a")
+                        cli_strips=true
                 fi
 
                 local stock_apk_to_patch="${stock_apk}.stripped.apk"
-                prep_patch_input "$stock_apk" "$stock_apk_to_patch" "$build_mode"
+                prep_patch_input "$stock_apk" "$stock_apk_to_patch" "$build_mode" "$cli_strips"
 
                 local apk_output="${BUILD_DIR}/${app_name_l}-${rv_brand_f}-v${version_f}-${arch_f}.apk"
                 if [ "${NORB:-}" != true ] || { [ ! -f "$patched_apk" ] && [ ! -f "$apk_output" ]; }; then
