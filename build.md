@@ -1,4 +1,4 @@
-# Build 2026-11-11
+# Build 2026-11-13
 
-Instagram-Piko `452.1.0.53.64` ✅  
+Facebook-Hush `586.0.0.52.53` ✅  
 
