@@ -101,15 +101,15 @@ get_prebuilts() {
                         file=$(find "$dir" -maxdepth 1 -name "*cli-${name_ver#v}*.jar" -o -name "*desktop-${name_ver#v}*.jar" -type f 2>/dev/null)
                         local grab_cl="false"
                 elif [ "$tag" = "Patches" ]; then
-                        file=$(find "$dir" -maxdepth 1 -name "*patches-${name_ver#v}.*" -type f 2>/dev/null)
+                        file=$(find "$dir" -maxdepth 1 -name "*patches-${name_ver#v}.mpp" -type f 2>/dev/null)
                         local grab_cl="true"
                 else abort unreachable; fi
 
                 local url tag_name matches
                 if [ "$ver" = "latest" ]; then
-                        file=$(grep -v '/[^/]*dev[^/]*$' <<<"$file" | head -1)
+                        file=$(grep -v '/[^/]*dev[^/]*$' <<<"$file" | sort -V | tail -1)
                 else
-                        file=$(grep "/[^/]*${ver#v}[^/]*\$" <<<"$file" | head -1)
+                        file=$(grep "/[^/]*${ver#v}[^/]*\$" <<<"$file" | sort -V | tail -1)
                 fi
                 if [ -z "$file" ]; then
                         local resp asset
@@ -139,14 +139,14 @@ get_prebuilts() {
                                         fi
                                 fi
                         else
-                                matches=$(jq -e '.assets | map(select(.name | (endswith(".asc") or endswith(".json") or endswith(".txt") or endswith(".sig")) | not))' <<<"$resp")
+                                matches=$(jq -e '.assets | map(select(.name | endswith(".mpp")))' <<<"$resp")
                                 if [ "$(jq 'length' <<<"$matches")" -eq 0 ]; then
-                                        wpr "No asset found for ${tag} from ${src}"
+                                        wpr "No .mpp patches asset found for ${src} (tag: ${tag_name})"
                                         return 1
                                 elif [ "$(jq 'length' <<<"$matches")" -ne 1 ]; then
-                                        wpr "More than 1 asset was found for this release. Falling back to the first one found..."
+                                        wpr "Multiple .mpp assets found for ${src}, using the newest..."
                                 fi
-                                asset=$(jq -r '.[0]' <<<"$matches")
+                                asset=$(jq -r 'sort_by(.id) | last' <<<"$matches")
                         fi
 
                         if [ -z "$asset" ] || [ "$asset" = "null" ]; then
