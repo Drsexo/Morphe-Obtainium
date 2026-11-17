@@ -1,5 +1,7 @@
-# Build 2026-11-16
+# Build 2026-11-17
 
-Google-Photos-Morphe `7.99.0.1007655401` ✅  
-Twitch-Lurk `31.8.0` ✅  
+YouTube-Morphe `21.46.522` ✅  
+YouTube-Music-Morphe `9.46.51` ✅  
+Reddit-Morphe `2026.46.0` ✅  
+Instagram-Piko `452.1.0.53.64` ✅  
 
