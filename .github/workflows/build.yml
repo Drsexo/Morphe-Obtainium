@@ -152,14 +152,14 @@ jobs:
           fi
 
           X_PATCHES_VER=$(get_patches_version "X-Piko")
-          X_LAST_VER=$(get_last_patches_ver "piko-newx")
+          X_LAST_VER=$(get_last_patches_ver "piko")
           if [ "$X_PATCHES_VER" = "dev" ]; then
-            X_LATEST=$(get_latest_upstream_ver "crimera/piko-newx" "true")
+            X_LATEST=$(get_latest_upstream_ver "crimera/piko" "true")
           else
-            X_LATEST=$(get_latest_upstream_ver "crimera/piko-newx" "false")
+            X_LATEST=$(get_latest_upstream_ver "crimera/piko" "false")
           fi
           if [ -z "$X_LAST_VER" ] || [ "$X_LAST_VER" != "$X_LATEST" ]; then
-            echo "X patches (piko-newx): '${X_LAST_VER:-none}' -> '${X_LATEST}'"
+            echo "X patches (piko): '${X_LAST_VER:-none}' -> '${X_LATEST}'"
             BUILD_X="true"
           fi
 

@@ -35,7 +35,7 @@ pkg-name = "com.twitter.android"
 build-mode = "apk"
 apkmirror-dlurl = "https://apkmirror.com/apk/x-corp/twitter"
 version = "latest"
-patches-source = "crimera/piko-newx"
+patches-source = "crimera/piko"
 patches-version = "dev"
 included-patches = "'NewX: Restore Twitter branding'"
 
