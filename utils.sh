@@ -755,7 +755,7 @@ get_apkmirror_vers() {
                 local IFS=$'\n'
                 local v
                 for v in $page_vers; do
-                        grep -iq '\(beta\|alpha\|secondary\)' <<<"$v" && continue
+                        grep -iq '\(beta\|alpha\|secondary\|extended\)' <<<"$v" && continue
                         grep -iq "${v} \(beta\|alpha\)" <<<"$apkm_resp" || stable_vers="${stable_vers}${stable_vers:+$'\n'}${v}"
                 done
         done
@@ -870,7 +870,7 @@ get_sorted_versions() {
         local dl_from=$1
         local all_vers
         all_vers=$(get_"${dl_from}"_vers) || return 1
-        all_vers=$(grep -iv '\(beta\|alpha\|secondary\)' <<<"$all_vers" || echo "$all_vers")
+        all_vers=$(grep -iv '\(beta\|alpha\|secondary\|extended\)' <<<"$all_vers" || echo "$all_vers")
         sort -rV <<<"$all_vers" | awk '!seen[$0]++'
 }
 
